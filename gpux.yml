@@ -1,0 +1,29 @@
+# gpux.yml - Docker-like configuration for ML inference
+name: sentiment-analysis
+version: 1.0.0
+
+model:
+  source: ./model.onnx
+  format: onnx
+  
+inputs:
+  text:
+    type: string
+    max_length: 512
+    required: true
+    
+outputs:
+  sentiment:
+    type: float32
+    shape: [1, 2]
+    labels: [negative, positive]
+
+runtime:
+  gpu:
+    memory: 2GB
+    backend: auto  # vulkan | metal | dx12
+    
+serving:
+  port: 8080
+  batch_size: 1
+  timeout: 5s

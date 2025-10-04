@@ -1,0 +1,36 @@
+# gpux.yml - Image Classification Example
+name: image-classification
+version: 1.0.0
+description: "ResNet-50 image classification model for ImageNet"
+
+model:
+  source: ./resnet50.onnx
+  format: onnx
+
+inputs:
+  input:
+    type: float32
+    shape: [1, 3, 224, 224]
+    required: true
+    description: "Preprocessed image tensor (RGB, normalized)"
+
+outputs:
+  output:
+    type: float32
+    shape: [1, 1000]
+    description: "Class probabilities for ImageNet classes"
+
+runtime:
+  gpu:
+    memory: 4GB
+    backend: auto
+
+serving:
+  port: 8080
+  host: 0.0.0.0
+  batch_size: 1
+  timeout: 10
+
+preprocessing:
+  resize: [224, 224]
+  normalize: imagenet
