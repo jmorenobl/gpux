@@ -317,18 +317,17 @@ class GPUXConfigParser:
             raise ValueError(msg)
 
         config_dict = self.to_dict()
-        
+
         # Convert Path objects to strings for YAML serialization
-        def convert_paths(obj):
+        def convert_paths(obj: Any) -> Any:
             if isinstance(obj, dict):
                 return {k: convert_paths(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
+            if isinstance(obj, list):
                 return [convert_paths(item) for item in obj]
-            elif isinstance(obj, Path):
+            if isinstance(obj, Path):
                 return str(obj)
-            else:
-                return obj
-        
+            return obj
+
         config_dict = convert_paths(config_dict)
 
         with Path(path).open("w", encoding="utf-8") as f:

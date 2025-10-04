@@ -215,8 +215,11 @@ def _start_server(  # noqa: C901
     """
     try:
         import numpy as np  # noqa: PLC0415
-        import uvicorn  # noqa: PLC0415
-        from fastapi import FastAPI, HTTPException  # noqa: PLC0415
+        import uvicorn  # type: ignore[import-not-found]  # noqa: PLC0415
+        from fastapi import (  # type: ignore[import-not-found]  # noqa: PLC0415
+            FastAPI,
+            HTTPException,
+        )
 
         # Create FastAPI app
         app = FastAPI(

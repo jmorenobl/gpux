@@ -233,10 +233,10 @@ class ModelInspector:
 
     def _create_session(self, model_path: str | Path) -> ort.InferenceSession:
         """Create an ONNX Runtime session for the model.
-        
+
         Args:
             model_path: Path to the ONNX model file
-            
+
         Returns:
             ONNX Runtime inference session
         """
