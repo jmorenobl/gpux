@@ -231,6 +231,17 @@ class ModelInspector:
 
         return metadata
 
+    def _create_session(self, model_path: str | Path) -> ort.InferenceSession:
+        """Create an ONNX Runtime session for the model.
+        
+        Args:
+            model_path: Path to the ONNX model file
+            
+        Returns:
+            ONNX Runtime inference session
+        """
+        return ort.InferenceSession(str(model_path))
+
     def validate_input(self, input_data: dict[str, np.ndarray]) -> bool:  # noqa: C901
         """Validate input data against model specifications.
 

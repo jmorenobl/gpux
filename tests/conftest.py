@@ -47,6 +47,8 @@ def simple_onnx_model(temp_dir: Path) -> Path:
     # Create the model
     model = helper.make_model(graph)
     model.opset_import[0].version = 11
+    # Set IR version to 11 (compatible with ONNX Runtime)
+    model.ir_version = 11
 
     # Save the model
     model_path = temp_dir / "simple_model.onnx"

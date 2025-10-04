@@ -37,7 +37,7 @@ class TestInputConfig:
         """Test converting input config to dictionary."""
         config = InputConfig(name="input", type="float32", shape=[1, 10])
 
-        config_dict = config.to_dict()
+        config_dict = config.model_dump()
 
         assert config_dict["name"] == "input"
         assert config_dict["type"] == "float32"
@@ -53,7 +53,7 @@ class TestInputConfig:
             "required": False,
         }
 
-        config = InputConfig.from_dict(config_dict)
+        config = InputConfig(**config_dict)
 
         assert config.name == "input"
         assert config.type == "float32"
@@ -86,7 +86,7 @@ class TestOutputConfig:
             name="output", type="float32", shape=[1, 2], labels=["negative", "positive"]
         )
 
-        config_dict = config.to_dict()
+        config_dict = config.model_dump()
 
         assert config_dict["name"] == "output"
         assert config_dict["type"] == "float32"
@@ -132,10 +132,10 @@ class TestGPUConfig:
         GPUConfig(memory="1024KB")
 
         # Invalid memory specifications
-        with pytest.raises(ValueError, match="Invalid memory format"):
+        with pytest.raises(ValueError, match="Memory must be specified as GB, MB, or KB"):
             GPUConfig(memory="2")
 
-        with pytest.raises(ValueError, match="Invalid memory format"):
+        with pytest.raises(ValueError, match="Memory must be specified as GB, MB, or KB"):
             GPUConfig(memory="2TB")
 
 
@@ -168,7 +168,7 @@ class TestGPUXConfig:
         assert len(config.outputs) == 1
 
         # Invalid config - no inputs
-        with pytest.raises(ValueError, match="Inputs are required"):
+        with pytest.raises(ValueError, match="At least one input must be specified"):
             GPUXConfig(
                 name="test",
                 model=ModelConfig(source="model.onnx"),
@@ -177,7 +177,7 @@ class TestGPUXConfig:
             )
 
         # Invalid config - no outputs
-        with pytest.raises(ValueError, match="Outputs are required"):
+        with pytest.raises(ValueError, match="At least one output must be specified"):
             GPUXConfig(
                 name="test",
                 model=ModelConfig(source="model.onnx"),
@@ -287,8 +287,10 @@ outputs:
         # Should be valid with the model file
         assert parser.validate_model_path(simple_onnx_model.parent)
 
-        # Should be invalid with different directory
-        assert not parser.validate_model_path(temp_dir)
+        # Should be invalid with different directory (create a subdirectory)
+        different_dir = temp_dir / "different"
+        different_dir.mkdir()
+        assert not parser.validate_model_path(different_dir)
 
     def test_get_model_path(self, sample_gpuxfile, simple_onnx_model):
         """Test getting model path."""

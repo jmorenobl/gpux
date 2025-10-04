@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class ModelConfig(BaseModel):
     format: str = "onnx"
     version: str | None = None
 
-    @validator("source")
+    @field_validator("source")
     @classmethod
     def validate_source(cls, v: str | Path) -> Path:
         """Validate model source path."""
@@ -55,7 +55,7 @@ class GPUConfig(BaseModel):
     memory: str = "2GB"
     backend: str = "auto"  # auto, vulkan, metal, dx12, cuda, rocm, coreml
 
-    @validator("memory")
+    @field_validator("memory")
     @classmethod
     def validate_memory(cls, v: str) -> str:
         """Validate memory specification."""
@@ -112,7 +112,7 @@ class GPUXConfig(BaseModel):
 
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    @validator("inputs")
+    @field_validator("inputs")
     @classmethod
     def validate_inputs(cls, v: list[InputConfig]) -> list[InputConfig]:
         """Validate inputs configuration."""
@@ -121,7 +121,7 @@ class GPUXConfig(BaseModel):
             raise ValueError(msg)
         return v
 
-    @validator("outputs")
+    @field_validator("outputs")
     @classmethod
     def validate_outputs(cls, v: list[OutputConfig]) -> list[OutputConfig]:
         """Validate outputs configuration."""
@@ -304,7 +304,7 @@ class GPUXConfigParser:
         if self._config is None:
             return {}
 
-        return self._config.dict()
+        return self._config.model_dump()
 
     def save(self, path: str | Path) -> None:
         """Save configuration to file.
@@ -317,6 +317,19 @@ class GPUXConfigParser:
             raise ValueError(msg)
 
         config_dict = self.to_dict()
+        
+        # Convert Path objects to strings for YAML serialization
+        def convert_paths(obj):
+            if isinstance(obj, dict):
+                return {k: convert_paths(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_paths(item) for item in obj]
+            elif isinstance(obj, Path):
+                return str(obj)
+            else:
+                return obj
+        
+        config_dict = convert_paths(config_dict)
 
         with Path(path).open("w", encoding="utf-8") as f:
             yaml.dump(config_dict, f, default_flow_style=False, indent=2)

@@ -185,6 +185,25 @@ runtime:
 - ❌ Don't ignore type hints (use mypy strictly)
 - ❌ Don't skip tests (aim for 90%+ coverage)
 
+## Development Workflow
+
+### Phase-Based Development
+- **Plan First**: Always create a detailed plan for complex tasks before starting implementation
+- **Phase Confirmation**: After completing each phase, wait for explicit user confirmation before proceeding
+- **Commit After Phase**: Commit code changes after each completed phase with conventional commit messages
+- **One Phase at a Time**: Focus on completing one phase fully before starting the next
+
+### Quality Gates
+- **Test Before Commit**: Ensure all tests pass before committing any phase
+- **Lint Before Commit**: Run ruff and mypy checks before committing
+- **Documentation Updates**: Update relevant documentation as part of each phase
+- **Incremental Progress**: Each phase should deliver working, testable functionality
+
+### Emergency Fixes
+- **Critical Issues**: Address failing tests and broken functionality immediately
+- **Dependency Issues**: Resolve import errors and dependency conflicts as priority
+- **Type Safety**: Fix mypy errors before proceeding with new features
+
 ## References
 - [Cursor Documentation - AGENTS.md](https://cursor.com/docs/context/rules#agentsmd)
 - ONNX Runtime Documentation

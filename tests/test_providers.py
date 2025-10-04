@@ -140,13 +140,21 @@ class TestProviderManager:
         """Test that provider priority is reasonable."""
         priority = provider_manager._provider_priority
 
-        # CPU should be last (fallback)
-        assert priority[-1] == ExecutionProvider.CPU
-
-        # TensorRT should be first (best performance)
-        assert priority[0] == ExecutionProvider.TENSORRT
-
         # Check that all providers are in the priority list
         all_providers = set(ExecutionProvider)
         priority_providers = set(priority)
         assert all_providers == priority_providers
+        
+        # Check platform-specific priority order
+        import platform
+        system = platform.system().lower()
+        arch = platform.machine().lower()
+        
+        if system == "darwin" and arch in ["arm64", "aarch64"]:
+            # Apple Silicon - CoreML should be first, CPU second
+            assert priority[0] == ExecutionProvider.COREML
+            assert priority[1] == ExecutionProvider.CPU
+        else:
+            # Other platforms - TensorRT should be first, CPU should be last
+            assert priority[0] == ExecutionProvider.TENSORRT
+            assert priority[-1] == ExecutionProvider.CPU
