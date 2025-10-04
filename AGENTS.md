@@ -60,6 +60,20 @@ gpux-runtime/
 - Use `uv run <command>` to run commands in the virtual environment
 - Keep `pyproject.toml` as the single source of truth for dependencies
 
+### Git & Version Control
+- **Use Conventional Commits** for all commit messages following the format:
+  - `type(scope): description` (e.g., `feat(cli): add new run command`)
+  - **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`
+  - **Scope**: component being changed (e.g., `cli`, `core`, `config`, `tests`)
+  - **Description**: clear, concise description of the change
+  - **Examples**:
+    - `feat(runtime): add GPU memory management`
+    - `fix(config): resolve YAML parsing edge case`
+    - `docs(readme): update installation instructions`
+    - `refactor(providers): simplify provider selection logic`
+    - `test(runtime): add integration tests for inference`
+    - `chore(deps): update ruff to latest version`
+
 ### Architecture Principles
 - **Use ONNX Runtime** with execution providers, never raw WebGPU
 - **Focus on platform layer** - your value-add is UX/tooling, not ML kernels

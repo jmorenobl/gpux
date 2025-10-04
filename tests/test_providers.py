@@ -24,11 +24,11 @@ class TestProviderManager:
         """Test provider manager initialization."""
         manager = ProviderManager()
 
-        assert manager._available_providers is not None  # noqa: SLF001
-        assert len(manager._available_providers) > 0  # noqa: SLF001
-        assert "CPUExecutionProvider" in manager._available_providers  # noqa: SLF001
-        assert manager._provider_priority is not None  # noqa: SLF001
-        assert len(manager._provider_priority) > 0  # noqa: SLF001
+        assert manager._available_providers is not None
+        assert len(manager._available_providers) > 0
+        assert "CPUExecutionProvider" in manager._available_providers
+        assert manager._provider_priority is not None
+        assert len(manager._provider_priority) > 0
 
     def test_get_best_provider_default(self, provider_manager):
         """Test getting best provider with default settings."""
@@ -36,7 +36,7 @@ class TestProviderManager:
 
         assert provider is not None
         assert isinstance(provider, ExecutionProvider)
-        assert provider_manager._is_provider_available(provider)  # noqa: SLF001
+        assert provider_manager._is_provider_available(provider)
 
     def test_get_best_provider_preferred(self, provider_manager):
         """Test getting best provider with preferred provider."""
@@ -57,51 +57,51 @@ class TestProviderManager:
     def test_parse_provider_name(self, provider_manager):
         """Test parsing provider names."""
         # Test various name formats
-        assert provider_manager._parse_provider_name("cuda") == ExecutionProvider.CUDA  # noqa: SLF001
-        assert provider_manager._parse_provider_name("CUDA") == ExecutionProvider.CUDA  # noqa: SLF001
+        assert provider_manager._parse_provider_name("cuda") == ExecutionProvider.CUDA
+        assert provider_manager._parse_provider_name("CUDA") == ExecutionProvider.CUDA
         assert (
-            provider_manager._parse_provider_name("coreml")  # noqa: SLF001
+            provider_manager._parse_provider_name("coreml")
             == ExecutionProvider.COREML
         )
-        assert provider_manager._parse_provider_name("core") == ExecutionProvider.COREML  # noqa: SLF001
+        assert provider_manager._parse_provider_name("core") == ExecutionProvider.COREML
         assert (
-            provider_manager._parse_provider_name("tensorrt")  # noqa: SLF001
+            provider_manager._parse_provider_name("tensorrt")
             == ExecutionProvider.TENSORRT
         )
         assert (
-            provider_manager._parse_provider_name("trt")  # noqa: SLF001
+            provider_manager._parse_provider_name("trt")
             == ExecutionProvider.TENSORRT
         )
-        assert provider_manager._parse_provider_name("rocm") == ExecutionProvider.ROCM  # noqa: SLF001
+        assert provider_manager._parse_provider_name("rocm") == ExecutionProvider.ROCM
         assert (
-            provider_manager._parse_provider_name("directml")  # noqa: SLF001
+            provider_manager._parse_provider_name("directml")
             == ExecutionProvider.DIRECTML
         )
         assert (
-            provider_manager._parse_provider_name("dml")  # noqa: SLF001
+            provider_manager._parse_provider_name("dml")
             == ExecutionProvider.DIRECTML
         )
         assert (
-            provider_manager._parse_provider_name("openvino")  # noqa: SLF001
+            provider_manager._parse_provider_name("openvino")
             == ExecutionProvider.OPENVINO
         )
-        assert provider_manager._parse_provider_name("cpu") == ExecutionProvider.CPU  # noqa: SLF001
+        assert provider_manager._parse_provider_name("cpu") == ExecutionProvider.CPU
 
         # Test invalid names
-        assert provider_manager._parse_provider_name("invalid") is None  # noqa: SLF001
-        assert provider_manager._parse_provider_name("") is None  # noqa: SLF001
+        assert provider_manager._parse_provider_name("invalid") is None
+        assert provider_manager._parse_provider_name("") is None
 
     def test_is_provider_available(self, provider_manager):
         """Test checking provider availability."""
         # CPU should always be available
-        assert provider_manager._is_provider_available(ExecutionProvider.CPU) is True  # noqa: SLF001
+        assert provider_manager._is_provider_available(ExecutionProvider.CPU) is True
 
         # Test other providers (may or may not be available depending on system)
         for provider in ExecutionProvider:
             if provider != ExecutionProvider.CPU:
                 # We can't test the actual availability without knowing the system
                 # but we can test that the method doesn't crash
-                result = provider_manager._is_provider_available(provider)  # noqa: SLF001
+                result = provider_manager._is_provider_available(provider)
                 assert isinstance(result, bool)
 
     def test_get_provider_config(self, provider_manager):
@@ -138,7 +138,7 @@ class TestProviderManager:
 
     def test_provider_priority_order(self, provider_manager):
         """Test that provider priority is reasonable."""
-        priority = provider_manager._provider_priority  # noqa: SLF001
+        priority = provider_manager._provider_priority
 
         # CPU should be last (fallback)
         assert priority[-1] == ExecutionProvider.CPU

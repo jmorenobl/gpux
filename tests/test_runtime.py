@@ -14,22 +14,22 @@ class TestGPUXRuntime:
         """Test runtime initialization."""
         runtime = GPUXRuntime(model_path=simple_onnx_model)
 
-        assert runtime._model_path == simple_onnx_model  # noqa: SLF001
-        assert runtime._session is not None  # noqa: SLF001
-        assert runtime._model_info is not None  # noqa: SLF001
-        assert runtime._selected_provider is not None  # noqa: SLF001
+        assert runtime._model_path == simple_onnx_model
+        assert runtime._session is not None
+        assert runtime._model_info is not None
+        assert runtime._selected_provider is not None
 
         runtime.cleanup()
 
     def test_runtime_context_manager(self, simple_onnx_model):
         """Test runtime as context manager."""
         with GPUXRuntime(model_path=simple_onnx_model) as runtime:
-            assert runtime._session is not None  # noqa: SLF001
-            assert runtime._model_info is not None  # noqa: SLF001
+            assert runtime._session is not None
+            assert runtime._model_info is not None
 
         # Should be cleaned up after context
-        assert runtime._session is None  # noqa: SLF001
-        assert runtime._model_info is None  # noqa: SLF001
+        assert runtime._session is None
+        assert runtime._model_info is None
 
     def test_inference(self, runtime, sample_input_data, expected_output_data):
         """Test model inference."""
@@ -106,16 +106,16 @@ class TestGPUXRuntime:
     def test_memory_limit_parsing(self, runtime):
         """Test memory limit parsing."""
         # Test GB
-        assert runtime._parse_memory_limit("2GB") == 2 * 1024 * 1024 * 1024  # noqa: SLF001
+        assert runtime._parse_memory_limit("2GB") == 2 * 1024 * 1024 * 1024
 
         # Test MB
-        assert runtime._parse_memory_limit("512MB") == 512 * 1024 * 1024  # noqa: SLF001
+        assert runtime._parse_memory_limit("512MB") == 512 * 1024 * 1024
 
         # Test KB
-        assert runtime._parse_memory_limit("1024KB") == 1024 * 1024  # noqa: SLF001
+        assert runtime._parse_memory_limit("1024KB") == 1024 * 1024
 
         # Test bytes
-        assert runtime._parse_memory_limit("1024") == 1024  # noqa: SLF001
+        assert runtime._parse_memory_limit("1024") == 1024
 
 
 class TestModelInspector:
@@ -155,7 +155,7 @@ class TestModelInspector:
     def test_validate_input(self, simple_onnx_model, sample_input_data):
         """Test input validation."""
         inspector = ModelInspector()
-        inspector._session = inspector._create_session(simple_onnx_model)  # noqa: SLF001
+        inspector._session = inspector._create_session(simple_onnx_model)
 
         # Valid input
         assert inspector.validate_input(sample_input_data) is True

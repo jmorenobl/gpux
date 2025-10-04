@@ -193,7 +193,7 @@ class TestGPUXConfigParser:
         """Test parser initialization."""
         parser = GPUXConfigParser()
 
-        assert parser._config is None  # noqa: SLF001
+        assert parser._config is None
 
     def test_parse_file(self, sample_gpuxfile):
         """Test parsing configuration file."""
@@ -203,7 +203,7 @@ class TestGPUXConfigParser:
         assert config is not None
         assert config.name == "test-model"
         assert config.version == "1.0.0"
-        assert parser._config == config  # noqa: SLF001
+        assert parser._config == config
 
     def test_parse_file_nonexistent(self, temp_dir):
         """Test parsing non-existent file."""
@@ -267,7 +267,7 @@ outputs:
             },
         }
 
-        normalized = parser._normalize_config_data(data)  # noqa: SLF001
+        normalized = parser._normalize_config_data(data)
 
         assert isinstance(normalized["inputs"], list)
         assert len(normalized["inputs"]) == 2
