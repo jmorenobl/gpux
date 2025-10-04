@@ -25,12 +25,12 @@ class GPUXRuntime:
     def __init__(self, model_path):
         self.model_path = model_path
         self.session = None
-        
+
     def init(self):
         # Get available providers
         available = ort.get_available_providers()
         print(f"Available providers: {available}")
-        
+
         # Prioritize GPU providers
         providers = []
         if 'CUDAExecutionProvider' in available:
@@ -43,26 +43,26 @@ class GPUXRuntime:
             providers.append('DirectMLExecutionProvider')
         else:
             providers.append('CPUExecutionProvider')
-        
+
         # Create session
         self.session = ort.InferenceSession(
             self.model_path,
             providers=providers
         )
-        
+
         print(f"✅ Using: {providers[0]}")
         return providers[0]
-    
+
     def run(self, input_data):
         input_name = self.session.get_inputs()[0].name
         output_name = self.session.get_outputs()[0].name
-        
+
         # Run inference
         result = self.session.run(
             [output_name],
             {input_name: input_data}
         )
-        
+
         return result[0]
 ```
 
@@ -76,7 +76,7 @@ class GPUXRuntime {
     async init(modelPath) {
         const available = ort.getAvailableProviders();
         console.log('Available providers:', available);
-        
+
         // Prioritize GPU providers
         const providers = [];
         if (available.includes('CUDAExecutionProvider')) {
@@ -88,15 +88,15 @@ class GPUXRuntime {
         } else {
             providers.push('CPUExecutionProvider');
         }
-        
+
         this.session = await ort.InferenceSession.create(modelPath, {
             executionProviders: providers
         });
-        
+
         console.log(`✅ Using: ${providers[0]}`);
         return providers[0];
     }
-    
+
     async run(inputData) {
         const inputName = this.session.inputNames[0];
         const feeds = { [inputName]: inputData };
@@ -182,23 +182,23 @@ import numpy as np
 
 class GPUXRuntime:
     """Docker-like runtime for ML inference with auto GPU backend selection"""
-    
+
     def __init__(self, gpuxfile_path: str):
         self.gpuxfile_path = Path(gpuxfile_path)
         self.config = None
         self.session = None
         self.provider_name = None
-        
+
     def load_config(self):
         """Parse GPUXfile"""
         with open(self.gpuxfile_path) as f:
             self.config = yaml.safe_load(f)
         return self.config
-    
+
     def select_provider(self):
         """Intelligently select best available GPU provider"""
         available = ort.get_available_providers()
-        
+
         # Priority order
         priority = [
             'TensorrtExecutionProvider',  # NVIDIA TensorRT (fastest)
@@ -209,42 +209,42 @@ class GPUXRuntime:
             'OpenVINOExecutionProvider',  # Intel OpenVINO
             'CPUExecutionProvider'        # Universal fallback
         ]
-        
+
         for provider in priority:
             if provider in available:
                 self.provider_name = provider
                 return provider
-        
+
         # Fallback to CPU
         self.provider_name = 'CPUExecutionProvider'
         return 'CPUExecutionProvider'
-    
+
     def init(self):
         """Initialize ONNX Runtime session"""
         # Load config
         self.load_config()
-        
+
         # Select provider
         provider = self.select_provider()
-        
+
         # Create session
         model_path = self.gpuxfile_path.parent / self.config['model']['source']
-        
+
         session_options = ort.SessionOptions()
         session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        
+
         self.session = ort.InferenceSession(
             str(model_path),
             sess_options=session_options,
             providers=[provider]
         )
-        
+
         print(f"✅ Model loaded: {self.config['name']}")
         print(f"✅ Backend: {provider}")
         print(f"✅ Device: {self._get_device_name(provider)}")
-        
+
         return provider
-    
+
     def _get_device_name(self, provider):
         """Get friendly device name"""
         device_map = {
@@ -257,34 +257,34 @@ class GPUXRuntime:
             'CPUExecutionProvider': 'CPU'
         }
         return device_map.get(provider, provider)
-    
+
     def run(self, input_data):
         """Run inference"""
         if not self.session:
             raise RuntimeError("Runtime not initialized. Call init() first.")
-        
+
         # Get input/output names
         input_name = self.session.get_inputs()[0].name
         output_name = self.session.get_outputs()[0].name
-        
+
         # Prepare input
         if isinstance(input_data, str):
             # For text input, convert to appropriate format
             input_data = np.array([[input_data]], dtype=object)
-        
+
         # Run inference
         result = self.session.run(
             [output_name],
             {input_name: input_data}
         )
-        
+
         return result[0]
-    
+
     def inspect(self):
         """Get runtime information"""
         if not self.session:
             return {"error": "Session not initialized"}
-        
+
         return {
             "name": self.config['name'],
             "model": self.config['model']['source'],
@@ -325,7 +325,7 @@ def cli():
 def build(path):
     """Build a GPUX project"""
     click.echo("📦 Building GPUX project...\n")
-    
+
     try:
         runtime = GPUXRuntime(f"{path}/GPUXfile")
         runtime.load_config()
@@ -341,14 +341,14 @@ def build(path):
 def run(name, input):
     """Run inference"""
     click.echo(f"🚀 Running {name}...\n")
-    
+
     try:
         runtime = GPUXRuntime('./GPUXfile')
         runtime.init()
-        
+
         # Run inference
         result = runtime.run(input)
-        
+
         click.echo(f"\n📊 Result: {result}")
     except Exception as e:
         click.echo(f"❌ Run failed: {e}", err=True)
@@ -361,7 +361,7 @@ def inspect(name):
     try:
         runtime = GPUXRuntime('./GPUXfile')
         runtime.init()
-        
+
         info = runtime.inspect()
         click.echo(json.dumps(info, indent=2))
     except Exception as e:

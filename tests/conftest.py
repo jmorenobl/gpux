@@ -7,21 +7,20 @@ from pathlib import Path
 import numpy as np
 import onnx
 import pytest
-from onnx import TensorProto, helper
-
 from gpux.config.parser import GPUXConfigParser
 from gpux.core.providers import ProviderManager
 from gpux.core.runtime import GPUXRuntime
+from onnx import TensorProto, helper
 
 
-@pytest.fixture
+@pytest.fixture()
 def temp_dir() -> Generator[Path, None, None]:
     """Create a temporary directory for tests."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         yield Path(tmp_dir)
 
 
-@pytest.fixture
+@pytest.fixture()
 def simple_onnx_model(temp_dir: Path) -> Path:
     """Create a simple ONNX model for testing."""
     # Create a simple model: input -> add -> output
@@ -57,7 +56,7 @@ def simple_onnx_model(temp_dir: Path) -> Path:
     return model_path
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_gpuxfile(temp_dir: Path, simple_onnx_model: Path) -> Path:
     """Create a sample gpux.yml for testing."""
     config_content = f"""name: test-model
@@ -100,13 +99,13 @@ serving:
     return config_path
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_input_data() -> dict:
     """Create sample input data for testing."""
     return {"input": np.array([[1.0, 2.0]], dtype=np.float32)}
 
 
-@pytest.fixture
+@pytest.fixture()
 def expected_output_data() -> dict:
     """Create expected output data for testing."""
     return {
@@ -114,19 +113,19 @@ def expected_output_data() -> dict:
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def provider_manager() -> ProviderManager:
     """Create a provider manager for testing."""
     return ProviderManager()
 
 
-@pytest.fixture
+@pytest.fixture()
 def runtime(simple_onnx_model: Path) -> GPUXRuntime:
     """Create a GPUX runtime for testing."""
     return GPUXRuntime(model_path=simple_onnx_model)
 
 
-@pytest.fixture
+@pytest.fixture()
 def config_parser() -> GPUXConfigParser:
     """Create a configuration parser for testing."""
     return GPUXConfigParser()

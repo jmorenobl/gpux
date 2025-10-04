@@ -60,8 +60,7 @@ class TestProviderManager:
         assert provider_manager._parse_provider_name("cuda") == ExecutionProvider.CUDA
         assert provider_manager._parse_provider_name("CUDA") == ExecutionProvider.CUDA
         assert (
-            provider_manager._parse_provider_name("coreml")
-            == ExecutionProvider.COREML
+            provider_manager._parse_provider_name("coreml") == ExecutionProvider.COREML
         )
         assert provider_manager._parse_provider_name("core") == ExecutionProvider.COREML
         assert (
@@ -69,8 +68,7 @@ class TestProviderManager:
             == ExecutionProvider.TENSORRT
         )
         assert (
-            provider_manager._parse_provider_name("trt")
-            == ExecutionProvider.TENSORRT
+            provider_manager._parse_provider_name("trt") == ExecutionProvider.TENSORRT
         )
         assert provider_manager._parse_provider_name("rocm") == ExecutionProvider.ROCM
         assert (
@@ -78,8 +76,7 @@ class TestProviderManager:
             == ExecutionProvider.DIRECTML
         )
         assert (
-            provider_manager._parse_provider_name("dml")
-            == ExecutionProvider.DIRECTML
+            provider_manager._parse_provider_name("dml") == ExecutionProvider.DIRECTML
         )
         assert (
             provider_manager._parse_provider_name("openvino")
@@ -144,12 +141,13 @@ class TestProviderManager:
         all_providers = set(ExecutionProvider)
         priority_providers = set(priority)
         assert all_providers == priority_providers
-        
+
         # Check platform-specific priority order
         import platform
+
         system = platform.system().lower()
         arch = platform.machine().lower()
-        
+
         if system == "darwin" and arch in ["arm64", "aarch64"]:
             # Apple Silicon - CoreML should be first, CPU second
             assert priority[0] == ExecutionProvider.COREML

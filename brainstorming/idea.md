@@ -51,62 +51,62 @@ import wgpu
 
 async def test_wgpu():
     print("🚀 Testing wgpu-native with Python...\n")
-    
+
     # Request adapter
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     print(f"✅ Adapter acquired: {adapter}")
-    
+
     # Get adapter info
     info = await adapter.request_adapter_info_async()
     print(f"   Vendor: {info['vendor']}")
     print(f"   Device: {info['device']}")
-    
+
     # Request device
     device = await adapter.request_device_async()
     print("✅ Device acquired\n")
-    
+
     # Create a simple compute shader
     shader_code = """
     @group(0) @binding(0) var<storage, read_write> data: array<f32>;
-    
+
     @compute @workgroup_size(64)
     fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let index = global_id.x;
         data[index] = data[index] * 2.0;
     }
     """
-    
+
     # Create shader module
     shader_module = device.create_shader_module(code=shader_code)
     print("✅ Shader module created")
-    
+
     # Create buffer
     buffer = device.create_buffer(
         size=256,  # 64 floats * 4 bytes
         usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST
     )
     print("✅ GPU buffer created (256 bytes)")
-    
+
     # Create compute pipeline
     pipeline = device.create_compute_pipeline(
         layout="auto",
         compute={"module": shader_module, "entry_point": "main"}
     )
     print("✅ Compute pipeline created")
-    
+
     # Create bind group
     bind_group = device.create_bind_group(
         layout=pipeline.get_bind_group_layout(0),
         entries=[{"binding": 0, "resource": {"buffer": buffer}}]
     )
     print("✅ Bind group created")
-    
+
     # Write test data
     import array
     input_data = array.array('f', [1.0] * 64)
     device.queue.write_buffer(buffer, 0, input_data)
     print("✅ Test data written")
-    
+
     # Create and submit command
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
@@ -116,7 +116,7 @@ async def test_wgpu():
     compute_pass.end()
     device.queue.submit([command_encoder.finish()])
     print("✅ Compute shader executed\n")
-    
+
     print("🎉 SUCCESS! wgpu-native works perfectly with Python!")
     print("💡 You can build your Docker-like GPU runtime in Python!")
 
@@ -133,16 +133,16 @@ import wgpu
 
 def test_wgpu_sync():
     print("🚀 Testing wgpu-native with Python (sync)...\n")
-    
+
     # Everything is synchronous by default!
     adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
     print(f"✅ Adapter acquired")
-    
+
     device = adapter.request_device()
     print("✅ Device acquired")
-    
+
     # ... rest of the code works the same ...
-    
+
     print("🎉 SUCCESS! Synchronous API works great!")
 
 if __name__ == "__main__":
@@ -203,32 +203,32 @@ from typing import Dict, Any
 
 class GPURuntime:
     """Docker-like GPU runtime using wgpu-native"""
-    
+
     def __init__(self):
         self.adapter = wgpu.gpu.request_adapter(
             power_preference="high-performance"
         )
         self.device = self.adapter.request_device()
-    
+
     def execute(self, shader_code: str, buffers: Dict[str, Any]) -> Dict[str, Any]:
         """Execute GPU code with input buffers"""
         try:
             # Create shader
             shader = self.device.create_shader_module(code=shader_code)
-            
+
             # Create pipeline
             pipeline = self.device.create_compute_pipeline(
                 layout="auto",
                 compute={"module": shader, "entry_point": "main"}
             )
-            
+
             # ... create buffers, bind groups, execute ...
-            
+
             return {"status": "success", "results": results}
-            
+
         except Exception as e:
             return {"status": "error", "message": str(e)}
-    
+
     def cleanup(self):
         """Clean up GPU resources"""
         self.device.destroy()
@@ -243,11 +243,11 @@ runtime.cleanup()
 
 **Use Python with wgpu-py for your Docker-like GPU runtime!**
 
-✅ More production-ready than Node.js Dawn  
-✅ Better ecosystem for ML/compute workloads  
-✅ Safer (Rust backend vs C++)  
-✅ Easier to use (sync by default)  
-✅ Better documented and tested  
+✅ More production-ready than Node.js Dawn
+✅ Better ecosystem for ML/compute workloads
+✅ Safer (Rust backend vs C++)
+✅ Easier to use (sync by default)
+✅ Better documented and tested
 
 **Next steps:**
 1. Install: `pip install wgpu`
@@ -338,7 +338,7 @@ While WebGPU's performance improves with larger matrix sizes, CUDA remains more 
 
 **Architecture:**
 ```
-User's Model (PyTorch/TF) 
+User's Model (PyTorch/TF)
     ↓
 Export to ONNX
     ↓
@@ -376,7 +376,7 @@ Deploy anywhere
 
 ## **My Honest Recommendation**
 
-**Go with Option A: Inference-Only Runtime** 
+**Go with Option A: Inference-Only Runtime**
 
 Here's why this is actually BETTER than your original plan:
 
@@ -385,7 +385,7 @@ Here's why this is actually BETTER than your original plan:
 ```
 Problem: Deploying ML models is HARD
 - CUDA only works on NVIDIA
-- ROCm only on AMD  
+- ROCm only on AMD
 - Metal only on Apple
 - Docker doesn't solve GPU compatibility
 
@@ -440,7 +440,7 @@ Product: "GPU Runtime - Docker for ML Inference"
 
 Target Users:
 - Startups deploying ML models
-- Privacy-focused applications  
+- Privacy-focused applications
 - Edge/IoT developers
 - Serverless ML developers
 
@@ -483,7 +483,7 @@ result = runtime.infer(model="resnet.onnx", input=image)
 
 ## **The Bottom Line**
 
-Your original insight was **BRILLIANT**: 
+Your original insight was **BRILLIANT**:
 > "Use WebGPU to avoid GPU compatibility issues"
 
 But you need to **refine the scope**:
@@ -531,19 +531,19 @@ For ML inference, here's what makes sense:
 ```yaml
 # GPUXfile
 name: sentiment-analysis
-model: 
+model:
   source: ./model.onnx  # or huggingface:user/model
   format: onnx
-  
+
 runtime:
   gpu: auto  # or specific: vulkan, metal, dx12
   memory: 2GB
-  
+
 inputs:
   - name: text
     type: string
     max_length: 512
-    
+
 outputs:
   - name: sentiment
     type: float32
@@ -551,7 +551,7 @@ outputs:
 
 preprocessing:
   tokenizer: bert-base-uncased
-  
+
 serving:
   port: 8080
   batch_size: 1
@@ -583,11 +583,11 @@ pipeline:
     type: image
     resize: [224, 224]
     normalize: imagenet
-    
+
   - name: inference
     model: resnet50.onnx
     device: gpu
-    
+
   - name: postprocess
     top_k: 5
     labels: ./imagenet_labels.txt
@@ -595,7 +595,7 @@ pipeline:
 resources:
   gpu_memory: 4GB
   cpu_memory: 2GB
-  
+
 api:
   type: rest
   port: 8080
@@ -621,7 +621,7 @@ runtime: python  # or javascript, rust
 
 model:
   path: ./model.onnx
-  
+
 handler: ./handler.py  # Custom pre/post processing
 
 dependencies:
@@ -679,7 +679,7 @@ preprocessing:
 ```yaml
 pipeline:
   - preprocess
-  - inference  
+  - inference
   - postprocess
 ```
 
@@ -757,7 +757,7 @@ $ gpux serve sentiment-analysis
    GPU: NVIDIA GeForce RTX 3080
    Memory: 2.1 GB allocated
    Backend: Vulkan
-   
+
 🌐 API Endpoints:
    POST /predict
    GET  /health
@@ -779,12 +779,12 @@ $ gpux inspect sentiment-analysis
    Size: 45.2 MB
    Inputs: text (string)
    Outputs: sentiment (float32[2])
-   
+
 🎯 Performance:
    Avg inference: 47ms
    GPU memory: 2.1 GB
    Batch size: 1
-   
+
 🔧 Runtime:
    Backend: Vulkan
    Device: NVIDIA GeForce RTX 3080
@@ -884,13 +884,13 @@ version: 1.0.0
 model:
   source: ./model.onnx
   format: onnx
-  
+
 inputs:
   text:
     type: string
     max_length: 512
     required: true
-    
+
 outputs:
   sentiment:
     type: float32
@@ -901,7 +901,7 @@ runtime:
   gpu:
     memory: 2GB
     backend: auto  # vulkan | metal | dx12
-    
+
 serving:
   port: 8080
   batch_size: 1
@@ -941,7 +941,7 @@ $ gpux run model-name
 
 # Whether you have:
 ✓ NVIDIA GPU → Uses Vulkan
-✓ AMD GPU → Uses Vulkan  
+✓ AMD GPU → Uses Vulkan
 ✓ Apple Silicon → Uses Metal
 ✓ Intel GPU → Uses Vulkan
 ✓ No GPU? → Falls back to CPU (WASM)
@@ -969,7 +969,7 @@ $ gpux run model-name
 gpux build .        # Optimize model for GPU
 gpux run model
 
-# Option B: Use "prepare"  
+# Option B: Use "prepare"
 gpux prepare .      # More accurate for inference
 gpux run model
 

@@ -1,7 +1,7 @@
 # GPUX Quick Start Guide
 
-**Status**: ✅ **Validated and Ready**  
-**Platform**: Apple Silicon (M3) with macOS  
+**Status**: ✅ **Validated and Ready**
+**Platform**: Apple Silicon (M3) with macOS
 
 ## 🚀 **What is GPUX?**
 

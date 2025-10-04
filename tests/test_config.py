@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from gpux.config.parser import (
     GPUConfig,
     GPUXConfig,
@@ -132,10 +131,14 @@ class TestGPUConfig:
         GPUConfig(memory="1024KB")
 
         # Invalid memory specifications
-        with pytest.raises(ValueError, match="Memory must be specified as GB, MB, or KB"):
+        with pytest.raises(
+            ValueError, match="Memory must be specified as GB, MB, or KB"
+        ):
             GPUConfig(memory="2")
 
-        with pytest.raises(ValueError, match="Memory must be specified as GB, MB, or KB"):
+        with pytest.raises(
+            ValueError, match="Memory must be specified as GB, MB, or KB"
+        ):
             GPUConfig(memory="2TB")
 
 

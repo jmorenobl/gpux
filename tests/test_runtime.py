@@ -1,8 +1,9 @@
 """Tests for GPUX runtime functionality."""
 
+from typing import Any
+
 import numpy as np
 import pytest
-
 from gpux.core.models import ModelInspector
 from gpux.core.runtime import GPUXRuntime
 
@@ -92,7 +93,7 @@ class TestGPUXRuntime:
     def test_invalid_input_validation(self, runtime):
         """Test input validation with invalid data."""
         # Missing required input
-        invalid_input = {}
+        invalid_input: dict[str, Any] = {}
 
         with pytest.raises(RuntimeError, match="Input validation failed"):
             runtime.infer(invalid_input)
@@ -161,7 +162,7 @@ class TestModelInspector:
         assert inspector.validate_input(sample_input_data) is True
 
         # Invalid input - missing required input
-        invalid_input = {}
+        invalid_input: dict[str, Any] = {}
         assert inspector.validate_input(invalid_input) is False
 
         # Invalid input - wrong input name

@@ -214,9 +214,9 @@ def _start_server(  # noqa: C901
         workers: Number of workers
     """
     try:
-        import numpy as np  # noqa: PLC0415
-        import uvicorn  # type: ignore[import-not-found]  # noqa: PLC0415
-        from fastapi import (  # type: ignore[import-not-found]  # noqa: PLC0415
+        import numpy as np
+        import uvicorn  # type: ignore[import-not-found]
+        from fastapi import (  # type: ignore[import-not-found]
             FastAPI,
             HTTPException,
         )
@@ -229,13 +229,13 @@ def _start_server(  # noqa: C901
         )
 
         # Health check endpoint
-        @app.get("/health")  # type: ignore[misc]
+        @app.get("/health")
         async def health_check() -> dict[str, str]:
             """Health check endpoint."""
             return {"status": "healthy", "model": config.name}
 
         # Model info endpoint
-        @app.get("/info")  # type: ignore[misc]
+        @app.get("/info")
         async def model_info() -> dict[str, Any]:
             """Get model information."""
             model_info = runtime.get_model_info()
@@ -245,7 +245,7 @@ def _start_server(  # noqa: C901
             return model_info.to_dict()
 
         # Metrics endpoint
-        @app.get("/metrics")  # type: ignore[misc]
+        @app.get("/metrics")
         async def metrics() -> dict[str, Any]:
             """Get performance metrics."""
             provider_info = runtime.get_provider_info()
@@ -255,7 +255,7 @@ def _start_server(  # noqa: C901
             }
 
         # Prediction endpoint
-        @app.post("/predict")  # type: ignore[misc]
+        @app.post("/predict")
         async def predict(data: dict[str, Any]) -> dict[str, Any]:
             """Run inference on input data."""
             try:
