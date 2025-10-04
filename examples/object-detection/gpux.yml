@@ -1,0 +1,39 @@
+# gpux.yml - Object Detection Example (YOLOv8)
+name: object-detection
+version: 1.0.0
+description: "YOLOv8 object detection model for real-time detection"
+
+model:
+  source: ./yolov8n.onnx
+  format: onnx
+
+inputs:
+  images:
+    type: float32
+    shape: [1, 3, 640, 640]
+    required: true
+    description: "Preprocessed image tensor (RGB, normalized, resized to 640x640)"
+
+outputs:
+  output0:
+    type: float32
+    shape: [1, 84, 8400]
+    description: "YOLOv8 output tensor with bounding boxes and class predictions"
+
+runtime:
+  gpu:
+    memory: 3GB
+    backend: auto
+  batch_size: 1
+  timeout: 30
+
+serving:
+  port: 8080
+  host: 0.0.0.0
+  batch_size: 1
+  timeout: 15
+
+preprocessing:
+  resize: [640, 640]
+  normalize: imagenet
+  letterbox: true

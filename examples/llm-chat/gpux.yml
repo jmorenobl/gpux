@@ -1,0 +1,53 @@
+# gpux.yml - LLM Chat Example (Small Language Model)
+name: llm-chat
+version: 1.0.0
+description: "Small language model for chat and text generation"
+
+model:
+  source: ./llm_model.onnx
+  format: onnx
+
+inputs:
+  input_ids:
+    type: int64
+    shape: [1, 2048]
+    required: true
+    description: "Tokenized input text with padding"
+  attention_mask:
+    type: int64
+    shape: [1, 2048]
+    required: true
+    description: "Attention mask for input tokens"
+  past_key_values:
+    type: float32
+    shape: [32, 2, 16, 64, 128]
+    required: false
+    description: "Cached key-value states for generation"
+
+outputs:
+  logits:
+    type: float32
+    shape: [1, 2048, 32000]
+    description: "Next token prediction logits"
+  past_key_values:
+    type: float32
+    shape: [32, 2, 16, 64, 128]
+    description: "Updated key-value states for next generation step"
+
+runtime:
+  gpu:
+    memory: 8GB
+    backend: auto
+  batch_size: 1
+  timeout: 60
+
+serving:
+  port: 8080
+  host: 0.0.0.0
+  batch_size: 1
+  timeout: 30
+
+preprocessing:
+  tokenizer: microsoft/DialoGPT-medium
+  max_length: 2048
+  padding: true

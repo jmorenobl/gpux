@@ -1,0 +1,46 @@
+# gpux.yml - Speech Recognition Example (Whisper)
+name: speech-recognition
+version: 1.0.0
+description: "Whisper speech recognition model for audio transcription"
+
+model:
+  source: ./whisper-tiny.onnx
+  format: onnx
+
+inputs:
+  mel:
+    type: float32
+    shape: [1, 80, 3000]
+    required: true
+    description: "Mel-spectrogram features from audio input"
+  decoder_input_ids:
+    type: int64
+    shape: [1, 1]
+    required: true
+    description: "Decoder input token IDs for generation"
+
+outputs:
+  logits:
+    type: float32
+    shape: [1, 1, 51865]
+    description: "Token prediction logits for transcription"
+
+runtime:
+  gpu:
+    memory: 2GB
+    backend: auto
+  batch_size: 1
+  timeout: 45
+
+serving:
+  port: 8080
+  host: 0.0.0.0
+  batch_size: 1
+  timeout: 30
+
+preprocessing:
+  sample_rate: 16000
+  n_mels: 80
+  n_fft: 400
+  hop_length: 160
+  chunk_length: 30
