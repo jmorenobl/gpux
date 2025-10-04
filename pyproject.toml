@@ -147,6 +147,9 @@ ignore = [
     "A003",  # Class attribute shadowing builtin
     "BLE001",  # Do not catch blind exception
     "S603",  # subprocess call: check for execution of untrusted input
+    "PLC0415",  # import should be at top-level (for optional imports)
+    "I001",  # Import block is un-sorted (auto-fixable)
+    "PT001",  # Use @pytest.fixture over @pytest.fixture() (auto-fixable)
 ]
 
 [tool.ruff.lint.per-file-ignores]
