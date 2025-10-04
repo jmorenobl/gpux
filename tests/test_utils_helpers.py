@@ -38,7 +38,7 @@ class TestSystemInfo:
 
         # Check that values are strings
         for key, value in info.items():
-            assert isinstance(value, (str, tuple))
+            assert isinstance(value, str | tuple)
             if key == "architecture":
                 assert isinstance(value, tuple)
             else:

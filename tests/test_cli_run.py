@@ -68,11 +68,11 @@ class TestRunCLI:
             mock_path.return_value = mock_current_dir
 
             # Mock Path(model_name) to return model_dir
-            def path_side_effect(*args, **kwargs):
+            def path_side_effect(*args):
                 if args and args[0] == "test-model":
                     mock_model_dir = MagicMock()
                     mock_model_dir.is_dir.return_value = True
-                    mock_model_dir.__truediv__ = lambda self, other: model_dir / other
+                    mock_model_dir.__truediv__ = lambda _, other: model_dir / other
                     return mock_model_dir
                 return mock_current_dir
 
@@ -97,7 +97,7 @@ class TestRunCLI:
             mock_path.return_value = mock_current_dir
 
             # Mock model directory check
-            def path_side_effect(*args, **kwargs):
+            def path_side_effect(*args):
                 if args and args[0] == "test-model":
                     mock_model_dir = MagicMock()
                     mock_model_dir.is_dir.return_value = False
@@ -120,19 +120,19 @@ class TestRunCLI:
         # Mock the current directory check to return False
         with patch("gpux.cli.run.Path") as mock_path:
 
-            def path_side_effect(*args, **kwargs):
+            def path_side_effect(*args):
                 if not args:  # Path() with no arguments
                     mock_current_dir = MagicMock()
                     mock_current_dir.exists.return_value = False
                     # Mock the __truediv__ method for current_dir / config_file
                     mock_config_file = MagicMock()
                     mock_config_file.exists.return_value = False
-                    mock_current_dir.__truediv__ = lambda self, other: mock_config_file
+                    mock_current_dir.__truediv__ = lambda _, __: mock_config_file
                     return mock_current_dir
                 if args and args[0] == "definitely-nonexistent-model-12345":
                     mock_model_dir = MagicMock()
                     mock_model_dir.is_dir.return_value = False
-                    mock_model_dir.__truediv__ = lambda self, other: MagicMock()
+                    mock_model_dir.__truediv__ = lambda _, __: MagicMock()
                     return mock_model_dir
                 if args and args[0] == ".gpux":
                     mock_gpux_dir = MagicMock()
@@ -203,7 +203,7 @@ class TestRunCLI:
         result = _load_input_data(None, str(input_file))
         assert result is None
 
-    def test_run_inference(self, temp_dir: Path) -> None:
+    def test_run_inference(self) -> None:
         """Test _run_inference function."""
         mock_runtime = MagicMock()
         mock_runtime.infer.return_value = {"output1": [0.1, 0.2], "output2": [0.3, 0.4]}
@@ -223,7 +223,7 @@ class TestRunCLI:
         input_data = {"input1": [1, 2, 3], "input2": [4, 5, 6]}
         output_file = temp_dir / "output.json"
 
-        with patch("gpux.cli.run.console.print") as mock_print:
+        with patch("gpux.cli.run.console.print"):
             _run_inference(mock_runtime, input_data, str(output_file))
             mock_runtime.infer.assert_called_once()
 
@@ -233,7 +233,7 @@ class TestRunCLI:
                 saved_data = json.load(f)
                 assert saved_data == {"output1": [0.1, 0.2], "output2": [0.3, 0.4]}
 
-    def test_run_benchmark(self, temp_dir: Path) -> None:
+    def test_run_benchmark(self) -> None:
         """Test _run_benchmark function."""
         mock_runtime = MagicMock()
         mock_runtime.benchmark.return_value = {
@@ -263,7 +263,7 @@ class TestRunCLI:
         input_data = {"input1": [1, 2, 3], "input2": [4, 5, 6]}
         output_file = temp_dir / "benchmark.json"
 
-        with patch("gpux.cli.run.console.print") as mock_print:
+        with patch("gpux.cli.run.console.print"):
             _run_benchmark(mock_runtime, input_data, 100, 10, str(output_file))
             mock_runtime.benchmark.assert_called_once()
 
@@ -318,10 +318,32 @@ class TestRunCLI:
             assert result.exit_code == 1
             assert "Model 'nonexistent-model' not found" in result.output
 
-    def test_run_command_no_input_data(
-        self, temp_dir: Path, sample_gpuxfile: Path
-    ) -> None:
+    def test_run_command_no_input_data(self, temp_dir: Path) -> None:
         """Test run command when no input data is provided."""
+        # Create a gpux.yml file in the temp directory
+        gpux_file = temp_dir / "gpux.yml"
+        gpux_file.write_text(
+            """
+name: test-model
+version: 1.0.0
+model:
+  source: model.onnx
+  format: onnx
+inputs:
+  input1:
+    type: float32
+    shape: [1, 10]
+outputs:
+  output1:
+    type: float32
+    shape: [1, 2]
+"""
+        )
+
+        # Create a dummy model.onnx file
+        model_file = temp_dir / "model.onnx"
+        model_file.touch()
+
         with patch("gpux.cli.run._find_model_config", return_value=temp_dir):
             result = self.runner.invoke(app, ["run", "test-model"])
             assert result.exit_code == 1
@@ -329,43 +351,47 @@ class TestRunCLI:
 
     def test_run_command_verbose(self) -> None:
         """Test run command with verbose flag."""
-        with patch("gpux.cli.run._find_model_config", return_value=None):
-            with patch("logging.getLogger") as mock_get_logger:
-                mock_logger = mock_get_logger.return_value
-                result = self.runner.invoke(app, ["run", "test-model", "--verbose"])
-                assert result.exit_code == 1
-                mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+        with (
+            patch("gpux.cli.run._find_model_config", return_value=None),
+            patch("logging.getLogger") as mock_get_logger,
+        ):
+            mock_logger = mock_get_logger.return_value
+            result = self.runner.invoke(app, ["run", "test-model", "--verbose"])
+            assert result.exit_code == 1
+            mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
 
-    def test_run_command_benchmark(self, temp_dir: Path, sample_gpuxfile: Path) -> None:
+    def test_run_command_benchmark(self, temp_dir: Path) -> None:
         """Test run command with benchmark flag."""
-        with patch("gpux.cli.run._find_model_config", return_value=temp_dir):
-            with patch("gpux.cli.run.GPUXConfigParser") as mock_parser_class:
-                mock_parser = MagicMock()
-                mock_parser_class.return_value = mock_parser
-                mock_config = MagicMock()
-                mock_config.runtime.dict.return_value = {}
-                mock_parser.parse_file.return_value = mock_config
-                # Mock the model file path and its existence
-                mock_model_file = MagicMock()
-                mock_model_file.exists.return_value = True
-                mock_parser.get_model_path.return_value = mock_model_file
+        with (
+            patch("gpux.cli.run._find_model_config", return_value=temp_dir),
+            patch("gpux.cli.run.GPUXConfigParser") as mock_parser_class,
+        ):
+            mock_parser = MagicMock()
+            mock_parser_class.return_value = mock_parser
+            mock_config = MagicMock()
+            mock_config.runtime.dict.return_value = {}
+            mock_parser.parse_file.return_value = mock_config
+            # Mock the model file path and its existence
+            mock_model_file = MagicMock()
+            mock_model_file.exists.return_value = True
+            mock_parser.get_model_path.return_value = mock_model_file
 
-                with patch("gpux.cli.run.GPUXRuntime") as mock_runtime_class:
-                    mock_runtime = MagicMock()
-                    mock_runtime_class.return_value = mock_runtime
-                    mock_runtime.benchmark.return_value = {"avg_inference_time": 1.5}
+            with patch("gpux.cli.run.GPUXRuntime") as mock_runtime_class:
+                mock_runtime = MagicMock()
+                mock_runtime_class.return_value = mock_runtime
+                mock_runtime.benchmark.return_value = {"avg_inference_time": 1.5}
 
-                    result = self.runner.invoke(
-                        app,
-                        [
-                            "run",
-                            "test-model",
-                            "--input",
-                            '{"input1": [1, 2, 3]}',
-                            "--benchmark",
-                        ],
-                    )
-                    assert result.exit_code == 0
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "run",
+                        "test-model",
+                        "--input",
+                        '{"input1": [1, 2, 3]}',
+                        "--benchmark",
+                    ],
+                )
+                assert result.exit_code == 0
 
     def test_run_command_exception_handling(self) -> None:
         """Test run command exception handling."""

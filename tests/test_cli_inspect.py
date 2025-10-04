@@ -43,9 +43,7 @@ class TestInspectCLI:
         assert "--model" in result.output
         assert "--json" in result.output
 
-    def test_inspect_model_file_success(
-        self, temp_dir: Path, simple_onnx_model: Path
-    ) -> None:
+    def test_inspect_model_file_success(self, simple_onnx_model: Path) -> None:
         """Test inspecting a model file directly."""
         with patch("gpux.cli.inspect.ModelInspector") as mock_inspector_class:
             mock_inspector = MagicMock()
@@ -72,9 +70,7 @@ class TestInspectCLI:
                 mock_inspector.inspect.assert_called_once_with(simple_onnx_model)
                 mock_print.assert_called()
 
-    def test_inspect_model_file_json_output(
-        self, temp_dir: Path, simple_onnx_model: Path
-    ) -> None:
+    def test_inspect_model_file_json_output(self, simple_onnx_model: Path) -> None:
         """Test inspecting a model file with JSON output."""
         with patch("gpux.cli.inspect.ModelInspector") as mock_inspector_class:
             mock_inspector = MagicMock()
@@ -109,82 +105,78 @@ class TestInspectCLI:
             _inspect_model_file(nonexistent_model, json_output=False)
         assert exc_info.value.exit_code == 1
 
-    def test_inspect_model_by_name_success(
-        self, temp_dir: Path, sample_gpuxfile: Path
-    ) -> None:
+    def test_inspect_model_by_name_success(self, temp_dir: Path) -> None:
         """Test inspecting a model by name."""
-        with patch("gpux.cli.inspect._find_model_config", return_value=temp_dir):
-            with patch("gpux.cli.inspect.GPUXConfigParser") as mock_parser_class:
-                mock_parser = MagicMock()
-                mock_parser_class.return_value = mock_parser
-                mock_config = MagicMock()
-                mock_config.dict.return_value = {"name": "test-model"}
-                mock_config.name = "test-model"
-                mock_config.version = "1.0.0"
-                mock_config.description = "Test model"
+        with (
+            patch("gpux.cli.inspect._find_model_config", return_value=temp_dir),
+            patch("gpux.cli.inspect.GPUXConfigParser") as mock_parser_class,
+        ):
+            mock_parser = MagicMock()
+            mock_parser_class.return_value = mock_parser
+            mock_config = MagicMock()
+            mock_config.dict.return_value = {"name": "test-model"}
+            mock_config.name = "test-model"
+            mock_config.version = "1.0.0"
+            mock_config.description = "Test model"
 
-                # Mock the model object
-                mock_model = MagicMock()
-                mock_model.format = "onnx"
-                mock_model.source = "model.onnx"
-                mock_config.model = mock_model
+            # Mock the model object
+            mock_model = MagicMock()
+            mock_model.format = "onnx"
+            mock_model.source = "model.onnx"
+            mock_config.model = mock_model
 
-                # Mock the runtime object
-                mock_runtime = MagicMock()
-                mock_gpu = MagicMock()
-                mock_gpu.memory = "1GB"
-                mock_gpu.backend = "auto"
-                mock_runtime.gpu = mock_gpu
-                mock_config.runtime = mock_runtime
+            # Mock the runtime object
+            mock_runtime = MagicMock()
+            mock_gpu = MagicMock()
+            mock_gpu.memory = "1GB"
+            mock_gpu.backend = "auto"
+            mock_runtime.gpu = mock_gpu
+            mock_config.runtime = mock_runtime
 
-                mock_parser.parse_file.return_value = mock_config
-                # Mock the model file path and its existence
-                mock_model_file = MagicMock()
-                mock_model_file.exists.return_value = True
-                mock_parser.get_model_path.return_value = mock_model_file
+            mock_parser.parse_file.return_value = mock_config
+            # Mock the model file path and its existence
+            mock_model_file = MagicMock()
+            mock_model_file.exists.return_value = True
+            mock_parser.get_model_path.return_value = mock_model_file
 
-                with patch("gpux.cli.inspect.ModelInspector") as mock_inspector_class:
-                    mock_inspector = MagicMock()
-                    mock_inspector_class.return_value = mock_inspector
-                    mock_model_info = MagicMock()
-                    mock_model_info.to_dict.return_value = {"name": "test-model"}
-                    mock_model_info.name = "test-model"
-                    mock_model_info.version = "1.0.0"
-                    mock_model_info.format = "onnx"
-                    mock_model_info.size_mb = 1.5
-                    mock_model_info.path = "model.onnx"
-                    # Mock input and output objects
-                    mock_input = MagicMock()
-                    mock_input.name = "input"
-                    mock_input.type = "float32"
-                    mock_input.shape = [1, 10]
-                    mock_input.required = True
-                    mock_input.description = "Input tensor"
+            with patch("gpux.cli.inspect.ModelInspector") as mock_inspector_class:
+                mock_inspector = MagicMock()
+                mock_inspector_class.return_value = mock_inspector
+                mock_model_info = MagicMock()
+                mock_model_info.to_dict.return_value = {"name": "test-model"}
+                mock_model_info.name = "test-model"
+                mock_model_info.version = "1.0.0"
+                mock_model_info.format = "onnx"
+                mock_model_info.size_mb = 1.5
+                mock_model_info.path = "model.onnx"
+                # Mock input and output objects
+                mock_input = MagicMock()
+                mock_input.name = "input"
+                mock_input.type = "float32"
+                mock_input.shape = [1, 10]
+                mock_input.required = True
+                mock_input.description = "Input tensor"
 
-                    mock_output = MagicMock()
-                    mock_output.name = "output"
-                    mock_output.type = "float32"
-                    mock_output.shape = [1, 2]
-                    mock_output.required = True
-                    mock_output.description = "Output tensor"
+                mock_output = MagicMock()
+                mock_output.name = "output"
+                mock_output.type = "float32"
+                mock_output.shape = [1, 2]
+                mock_output.required = True
+                mock_output.description = "Output tensor"
 
-                    mock_model_info.inputs = [mock_input]
-                    mock_model_info.outputs = [mock_output]
-                    mock_model_info.metadata = {"author": "test"}
-                    mock_inspector.inspect.return_value = mock_model_info
+                mock_model_info.inputs = [mock_input]
+                mock_model_info.outputs = [mock_output]
+                mock_model_info.metadata = {"author": "test"}
+                mock_inspector.inspect.return_value = mock_model_info
 
-                    with patch("gpux.cli.inspect.console.print") as mock_print:
-                        _inspect_model_by_name(
-                            "test-model", "gpux.yml", json_output=False
-                        )
+                with patch("gpux.cli.inspect.console.print") as mock_print:
+                    _inspect_model_by_name("test-model", "gpux.yml", json_output=False)
 
-                    # Verify the function was called correctly
-                    mock_parser.parse_file.assert_called_once_with(
-                        temp_dir / "gpux.yml"
-                    )
-                    mock_parser.get_model_path.assert_called_once_with(temp_dir)
-                    mock_inspector.inspect.assert_called_once()
-                    mock_print.assert_called()
+                # Verify the function was called correctly
+                mock_parser.parse_file.assert_called_once_with(temp_dir / "gpux.yml")
+                mock_parser.get_model_path.assert_called_once_with(temp_dir)
+                mock_inspector.inspect.assert_called_once()
+                mock_print.assert_called()
 
     def test_inspect_model_by_name_not_found(self) -> None:
         """Test inspecting a model by name when not found."""
@@ -260,11 +252,11 @@ class TestInspectCLI:
             mock_path.return_value = mock_current_dir
 
             # Mock Path(model_name) to return model_dir
-            def path_side_effect(*args, **kwargs):
+            def path_side_effect(*args):
                 if args and args[0] == "test-model":
                     mock_model_dir = MagicMock()
                     mock_model_dir.is_dir.return_value = True
-                    mock_model_dir.__truediv__ = lambda self, other: model_dir / other
+                    mock_model_dir.__truediv__ = lambda _, other: model_dir / other
                     return mock_model_dir
                 return mock_current_dir
 
@@ -289,7 +281,7 @@ class TestInspectCLI:
             mock_path.return_value = mock_current_dir
 
             # Mock model directory check
-            def path_side_effect(*args, **kwargs):
+            def path_side_effect(*args):
                 if args and args[0] == "test-model":
                     mock_model_dir = MagicMock()
                     mock_model_dir.is_dir.return_value = False
@@ -312,19 +304,19 @@ class TestInspectCLI:
         # Mock the current directory check to return False
         with patch("gpux.cli.inspect.Path") as mock_path:
 
-            def path_side_effect(*args, **kwargs):
+            def path_side_effect(*args):
                 if not args:  # Path() with no arguments
                     mock_current_dir = MagicMock()
                     mock_current_dir.exists.return_value = False
                     # Mock the __truediv__ method for current_dir / config_file
                     mock_config_file = MagicMock()
                     mock_config_file.exists.return_value = False
-                    mock_current_dir.__truediv__ = lambda self, other: mock_config_file
+                    mock_current_dir.__truediv__ = lambda _, __: mock_config_file
                     return mock_current_dir
                 if args and args[0] == "definitely-nonexistent-model-12345":
                     mock_model_dir = MagicMock()
                     mock_model_dir.is_dir.return_value = False
-                    mock_model_dir.__truediv__ = lambda self, other: MagicMock()
+                    mock_model_dir.__truediv__ = lambda _, __: MagicMock()
                     return mock_model_dir
                 if args and args[0] == ".gpux":
                     mock_gpux_dir = MagicMock()
@@ -429,9 +421,7 @@ class TestInspectCLI:
             _display_runtime_info(mock_provider_manager)
             mock_print.assert_called()
 
-    def test_inspect_command_model_file(
-        self, temp_dir: Path, simple_onnx_model: Path
-    ) -> None:
+    def test_inspect_command_model_file(self, simple_onnx_model: Path) -> None:
         """Test inspect command with model file."""
         with patch("gpux.cli.inspect._inspect_model_file") as mock_inspect:
             result = self.runner.invoke(
@@ -440,9 +430,7 @@ class TestInspectCLI:
             assert result.exit_code == 0
             mock_inspect.assert_called_once()
 
-    def test_inspect_command_model_name(
-        self, temp_dir: Path, sample_gpuxfile: Path
-    ) -> None:
+    def test_inspect_command_model_name(self) -> None:
         """Test inspect command with model name."""
         with patch("gpux.cli.inspect._inspect_model_by_name") as mock_inspect:
             result = self.runner.invoke(app, ["inspect", "test-model"])
@@ -458,12 +446,14 @@ class TestInspectCLI:
 
     def test_inspect_command_verbose(self) -> None:
         """Test inspect command with verbose flag."""
-        with patch("gpux.cli.inspect._inspect_runtime") as mock_inspect:
-            with patch("logging.getLogger") as mock_get_logger:
-                mock_logger = mock_get_logger.return_value
-                result = self.runner.invoke(app, ["inspect", "--verbose"])
-                assert result.exit_code == 0
-                mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+        with (
+            patch("gpux.cli.inspect._inspect_runtime"),
+            patch("logging.getLogger") as mock_get_logger,
+        ):
+            mock_logger = mock_get_logger.return_value
+            result = self.runner.invoke(app, ["inspect", "--verbose"])
+            assert result.exit_code == 0
+            mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
 
     def test_inspect_command_exception_handling(self) -> None:
         """Test inspect command exception handling."""

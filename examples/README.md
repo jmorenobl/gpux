@@ -110,10 +110,10 @@ gpux run speech-recognition --file audio.json
    ```bash
    # Single inference
    gpux run sentiment-analysis --input '{"text": "This is great!"}'
-   
+
    # From file
    gpux run sentiment-analysis --file input.json
-   
+
    # Benchmark
    gpux run sentiment-analysis --benchmark --runs 1000
    ```
@@ -174,24 +174,24 @@ Edit the `gpux.yml` file to customize:
    name: my-new-example
    version: 1.0.0
    description: "Description of your example"
-   
+
    model:
      source: ./my_model.onnx
      format: onnx
-   
+
    inputs:
      input_name:
        type: float32
        shape: [1, 10]
        required: true
        description: "Input description"
-   
+
    outputs:
      output_name:
        type: float32
        shape: [1, 2]
        description: "Output description"
-   
+
    runtime:
      gpu:
        memory: 2GB

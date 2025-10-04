@@ -304,7 +304,7 @@ class GPUXConfigParser:
         if self._config is None:
             return {}
 
-        return self._config.model_dump()  # type: ignore[no-any-return]
+        return self._config.model_dump()
 
     def save(self, path: str | Path) -> None:
         """Save configuration to file.

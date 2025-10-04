@@ -187,22 +187,22 @@ class TestGPUXRuntime:
     def test_infer_success(self, sample_model_path):
         """Test successful inference."""
         runtime = GPUXRuntime(sample_model_path)
-        
+
         input_data = {"input": [1, 2, 3, 4]}
         results = runtime.infer(input_data)
-        
+
         assert isinstance(results, dict)
         assert "output" in results
-        
+
         runtime.cleanup()
-    
+
     def test_infer_invalid_input(self, sample_model_path):
         """Test inference with invalid input."""
         runtime = GPUXRuntime(sample_model_path)
-        
+
         with pytest.raises(ValueError, match="Invalid input"):
             runtime.infer({"invalid": "data"})
-        
+
         runtime.cleanup()
 ```
 
@@ -243,17 +243,17 @@ class TestGPUXRuntime:
 ```python
 def infer(self, input_data: dict[str, Any]) -> dict[str, Any]:
     """Run inference on input data.
-    
+
     Args:
         input_data: Dictionary mapping input names to data arrays
-        
+
     Returns:
         Dictionary mapping output names to result arrays
-        
+
     Raises:
         ValueError: If input data is invalid
         RuntimeError: If inference fails
-        
+
     Example:
         >>> runtime = GPUXRuntime("model.onnx")
         >>> results = runtime.infer({"input": [1, 2, 3]})

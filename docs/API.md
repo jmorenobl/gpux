@@ -417,7 +417,7 @@ inputs:
     required: bool              # Whether input is required (default: true)
     description: string         # Input description
 
-# Output specifications  
+# Output specifications
 outputs:
   output_name:
     type: string                # Data type
