@@ -35,6 +35,7 @@ app = typer.Typer(
     help="Docker-like GPU runtime for ML inference with universal GPU compatibility",
     add_completion=False,
     rich_markup_mode="rich",
+    no_args_is_help=False,
 )
 
 # Add commands
@@ -69,7 +70,7 @@ def main(
     """
     if version:
         typer.echo(f"GPUX version {__version__}")
-        raise typer.Exit
+        raise typer.Exit(0)
 
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
