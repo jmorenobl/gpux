@@ -4,10 +4,10 @@ import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import typer
 from typer.testing import CliRunner
 
-from gpux.cli.build import _display_build_results, build_app
+from gpux.cli.build import _display_build_results, build_command
+from gpux.cli.main import app
 from gpux.core.models import InputSpec, OutputSpec
 
 
@@ -18,15 +18,13 @@ class TestBuildCLI:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    def test_build_app_creation(self) -> None:
-        """Test that the build app is created correctly."""
-        assert isinstance(build_app, typer.Typer)
-        assert build_app.info.name == "build"
-        assert "Build and optimize models" in build_app.info.help
+    def test_build_command_creation(self) -> None:
+        """Test that the build command is created correctly."""
+        assert callable(build_command)
 
     def test_build_command_help(self) -> None:
         """Test build command help output."""
-        result = self.runner.invoke(build_app, ["--help"])
+        result = self.runner.invoke(app, ["build", "--help"])
         assert result.exit_code == 0
         assert "Build and optimize models for GPU inference" in result.output
         assert "--config" in result.output
@@ -36,7 +34,7 @@ class TestBuildCLI:
     def test_build_command_config_file_not_found(self, temp_dir: Path) -> None:
         """Test build command when config file doesn't exist."""
         result = self.runner.invoke(
-            build_app, ["build", str(temp_dir), "--config", "nonexistent.yml"]
+            app, ["build", str(temp_dir), "--config", "nonexistent.yml"]
         )
         assert result.exit_code == 1
         assert "Configuration file not found" in result.output
@@ -86,7 +84,7 @@ class TestBuildCLI:
         config_path = temp_dir / "gpux.yml"
         config_path.write_text(sample_gpuxfile.read_text())
 
-        result = self.runner.invoke(build_app, ["build", str(temp_dir)])
+        result = self.runner.invoke(app, ["build", str(temp_dir)])
         assert result.exit_code == 0
         assert "Build completed successfully" in result.output
 
@@ -102,7 +100,7 @@ class TestBuildCLI:
         config_path = temp_dir / "gpux.yml"
         config_path.write_text(sample_gpuxfile.read_text())
 
-        result = self.runner.invoke(build_app, ["build", str(temp_dir)])
+        result = self.runner.invoke(app, ["build", str(temp_dir)])
         assert result.exit_code == 1
         assert "Model file not found" in result.output
 
@@ -119,7 +117,7 @@ class TestBuildCLI:
         config_path = temp_dir / "gpux.yml"
         config_path.write_text(sample_gpuxfile.read_text())
 
-        result = self.runner.invoke(build_app, ["build", str(temp_dir)])
+        result = self.runner.invoke(app, ["build", str(temp_dir)])
         assert result.exit_code == 1
         assert "Could not resolve model path" in result.output
 
@@ -167,9 +165,7 @@ class TestBuildCLI:
         config_path = temp_dir / "gpux.yml"
         config_path.write_text(sample_gpuxfile.read_text())
 
-        result = self.runner.invoke(
-            build_app, ["build", str(temp_dir), "--provider", "cuda"]
-        )
+        result = self.runner.invoke(app, ["build", str(temp_dir), "--provider", "cuda"])
         assert result.exit_code == 0
         mock_provider_manager.get_best_provider.assert_called_once_with("cuda")
 
@@ -217,9 +213,7 @@ class TestBuildCLI:
         config_path = temp_dir / "gpux.yml"
         config_path.write_text(sample_gpuxfile.read_text())
 
-        result = self.runner.invoke(
-            build_app, ["build", str(temp_dir), "--no-optimize"]
-        )
+        result = self.runner.invoke(app, ["build", str(temp_dir), "--no-optimize"])
         assert result.exit_code == 0
 
     def test_build_command_verbose(self, temp_dir: Path, sample_gpuxfile: Path) -> None:
@@ -234,9 +228,7 @@ class TestBuildCLI:
 
             with patch("logging.getLogger") as mock_get_logger:
                 mock_logger = mock_get_logger.return_value
-                result = self.runner.invoke(
-                    build_app, ["build", str(temp_dir), "--verbose"]
-                )
+                result = self.runner.invoke(app, ["build", str(temp_dir), "--verbose"])
                 assert result.exit_code == 1
                 mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
 
@@ -305,7 +297,7 @@ class TestBuildCLI:
         config_path = temp_dir / "gpux.yml"
         config_path.write_text(sample_gpuxfile.read_text())
 
-        result = self.runner.invoke(build_app, ["build", str(temp_dir)])
+        result = self.runner.invoke(app, ["build", str(temp_dir)])
         assert result.exit_code == 1
         assert "Build failed: Test error" in result.output
 
@@ -322,16 +314,14 @@ class TestBuildCLI:
         config_path.write_text(sample_gpuxfile.read_text())
 
         with patch("gpux.cli.build.console.print_exception") as mock_print_exception:
-            result = self.runner.invoke(
-                build_app, ["build", str(temp_dir), "--verbose"]
-            )
+            result = self.runner.invoke(app, ["build", str(temp_dir), "--verbose"])
             assert result.exit_code == 1
             assert "Build failed: Test runtime error" in result.output
             mock_print_exception.assert_called_once()
 
     def test_build_command_default_arguments(self) -> None:
         """Test build command with default arguments."""
-        result = self.runner.invoke(build_app, ["build", "--help"])
+        result = self.runner.invoke(app, ["build", "--help"])
         assert result.exit_code == 0
         # Check that default values are shown in help
         assert "Path to the GPUX project directory" in result.output
