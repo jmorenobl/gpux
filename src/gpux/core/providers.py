@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import platform
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import onnxruntime as ort
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ExecutionProvider(Enum):
     """Available execution providers for ONNX Runtime."""
-    
+
     TENSORRT = "TensorrtExecutionProvider"
     CUDA = "CUDAExecutionProvider"
     ROCM = "ROCmExecutionProvider"
@@ -26,46 +26,50 @@ class ExecutionProvider(Enum):
 
 class ProviderManager:
     """Manages execution provider selection and configuration."""
-    
+
     def __init__(self) -> None:
         """Initialize the provider manager."""
         self._available_providers = self._detect_available_providers()
         self._provider_priority = self._get_provider_priority()
-    
-    def _detect_available_providers(self) -> List[str]:
+
+    def _detect_available_providers(self) -> list[str]:
         """Detect available execution providers on the current system."""
         try:
             available = ort.get_available_providers()
             logger.info("Available providers: %s", available)
-            return available
-        except Exception as e:
+            return list(available)
+        except (RuntimeError, ImportError) as e:
             logger.warning("Failed to detect providers: %s", e)
             return ["CPUExecutionProvider"]
-    
-    def _get_provider_priority(self) -> List[ExecutionProvider]:
+
+    def _get_provider_priority(self) -> list[ExecutionProvider]:
         """Get provider priority based on platform and performance."""
         system = platform.system().lower()
         arch = platform.machine().lower()
-        
+
         # Base priority for all platforms
         priority = [
             ExecutionProvider.TENSORRT,  # Best performance for NVIDIA
-            ExecutionProvider.CUDA,      # Good NVIDIA performance
-            ExecutionProvider.ROCM,      # AMD GPUs
-            ExecutionProvider.COREML,    # Apple Silicon
+            ExecutionProvider.CUDA,  # Good NVIDIA performance
+            ExecutionProvider.ROCM,  # AMD GPUs
+            ExecutionProvider.COREML,  # Apple Silicon
             ExecutionProvider.DIRECTML,  # Windows GPUs
             ExecutionProvider.OPENVINO,  # Intel GPUs
-            ExecutionProvider.CPU,       # Universal fallback
+            ExecutionProvider.CPU,  # Universal fallback
         ]
-        
+
         # Platform-specific optimizations
         if system == "darwin" and arch in ["arm64", "aarch64"]:
             # Apple Silicon - prioritize CoreML
             priority = [
                 ExecutionProvider.COREML,
                 ExecutionProvider.CPU,
-            ] + [p for p in priority if p not in [ExecutionProvider.COREML, ExecutionProvider.CPU]]
-        
+            ] + [
+                p
+                for p in priority
+                if p not in [ExecutionProvider.COREML, ExecutionProvider.CPU]
+            ]
+
         elif system == "windows":
             # Windows - prioritize DirectML
             priority = [
@@ -74,74 +78,83 @@ class ProviderManager:
                 ExecutionProvider.DIRECTML,
                 ExecutionProvider.OPENVINO,
                 ExecutionProvider.CPU,
-            ] + [p for p in priority if p not in [
-                ExecutionProvider.TENSORRT, ExecutionProvider.CUDA,
-                ExecutionProvider.DIRECTML, ExecutionProvider.OPENVINO, ExecutionProvider.CPU
-            ]]
-        
+            ] + [
+                p
+                for p in priority
+                if p
+                not in [
+                    ExecutionProvider.TENSORRT,
+                    ExecutionProvider.CUDA,
+                    ExecutionProvider.DIRECTML,
+                    ExecutionProvider.OPENVINO,
+                    ExecutionProvider.CPU,
+                ]
+            ]
+
         return priority
-    
-    def get_best_provider(self, preferred: Optional[str] = None) -> ExecutionProvider:
+
+    def get_best_provider(self, preferred: str | None = None) -> ExecutionProvider:
         """Get the best available execution provider.
-        
+
         Args:
             preferred: Preferred provider name (e.g., "cuda", "coreml")
-            
+
         Returns:
             Best available execution provider
-            
+
         Raises:
             RuntimeError: If no providers are available
         """
         if preferred:
             preferred_provider = self._parse_provider_name(preferred)
             if preferred_provider and self._is_provider_available(preferred_provider):
-                logger.info(f"Using preferred provider: {preferred_provider.value}")
+                logger.info("Using preferred provider: %s", preferred_provider.value)
                 return preferred_provider
-        
+
         for provider in self._provider_priority:
             if self._is_provider_available(provider):
-                logger.info(f"Selected provider: {provider.value}")
+                logger.info("Selected provider: %s", provider.value)
                 return provider
-        
-        raise RuntimeError("No execution providers available")
-    
-    def _parse_provider_name(self, name: str) -> Optional[ExecutionProvider]:
+
+        msg = "No execution providers available"
+        raise RuntimeError(msg)
+
+    def _parse_provider_name(self, name: str) -> ExecutionProvider | None:  # noqa: PLR0911
         """Parse provider name string to ExecutionProvider enum."""
         name_lower = name.lower()
-        
+
         if "tensorrt" in name_lower or "trt" in name_lower:
             return ExecutionProvider.TENSORRT
-        elif "cuda" in name_lower:
+        if "cuda" in name_lower:
             return ExecutionProvider.CUDA
-        elif "rocm" in name_lower:
+        if "rocm" in name_lower:
             return ExecutionProvider.ROCM
-        elif "coreml" in name_lower or "core" in name_lower:
+        if "coreml" in name_lower or "core" in name_lower:
             return ExecutionProvider.COREML
-        elif "directml" in name_lower or "dml" in name_lower:
+        if "directml" in name_lower or "dml" in name_lower:
             return ExecutionProvider.DIRECTML
-        elif "openvino" in name_lower:
+        if "openvino" in name_lower:
             return ExecutionProvider.OPENVINO
-        elif "cpu" in name_lower:
+        if "cpu" in name_lower:
             return ExecutionProvider.CPU
-        
+
         return None
-    
+
     def _is_provider_available(self, provider: ExecutionProvider) -> bool:
         """Check if a provider is available on the current system."""
         return provider.value in self._available_providers
-    
-    def get_provider_config(self, provider: ExecutionProvider) -> Dict[str, Any]:
+
+    def get_provider_config(self, provider: ExecutionProvider) -> dict[str, Any]:
         """Get configuration for a specific provider.
-        
+
         Args:
             provider: Execution provider
-            
+
         Returns:
             Provider-specific configuration
         """
-        config: Dict[str, Any] = {}
-        
+        config: dict[str, Any] = {}
+
         if provider == ExecutionProvider.TENSORRT:
             config = {
                 "trt_max_workspace_size": 1 << 30,  # 1GB
@@ -161,19 +174,19 @@ class ProviderManager:
             config = {
                 "device_id": 0,
             }
-        
+
         return config
-    
-    def get_available_providers(self) -> List[str]:
+
+    def get_available_providers(self) -> list[str]:
         """Get list of available provider names."""
         return self._available_providers.copy()
-    
-    def get_provider_info(self, provider: ExecutionProvider) -> Dict[str, Any]:
+
+    def get_provider_info(self, provider: ExecutionProvider) -> dict[str, Any]:
         """Get information about a specific provider.
-        
+
         Args:
             provider: Execution provider
-            
+
         Returns:
             Provider information dictionary
         """
@@ -182,7 +195,7 @@ class ProviderManager:
             "available": self._is_provider_available(provider),
             "config": self.get_provider_config(provider),
         }
-        
+
         # Add platform-specific info
         if provider == ExecutionProvider.COREML:
             info["platform"] = "Apple Silicon"
@@ -202,5 +215,5 @@ class ProviderManager:
         elif provider == ExecutionProvider.CPU:
             info["platform"] = "Universal"
             info["description"] = "CPU fallback execution"
-        
+
         return info

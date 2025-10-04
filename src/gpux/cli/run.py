@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any
 
+import numpy as np
 import typer
 from rich.console import Console
 from rich.json import JSON
@@ -28,19 +29,19 @@ def run_command(
         ...,
         help="Name of the model to run",
     ),
-    input_data: Optional[str] = typer.Option(
+    input_data: str | None = typer.Option(
         None,
         "--input",
         "-i",
         help="Input data (JSON string or file path with @ prefix)",
     ),
-    input_file: Optional[str] = typer.Option(
+    input_file: str | None = typer.Option(
         None,
         "--file",
         "-f",
         help="Input file path",
     ),
-    output_file: Optional[str] = typer.Option(
+    output_file: str | None = typer.Option(
         None,
         "--output",
         "-o",
@@ -52,16 +53,15 @@ def run_command(
         "-c",
         help="Configuration file name",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         "-p",
         help="Preferred execution provider",
     ),
+    *,
     benchmark: bool = typer.Option(
-        False,
-        "--benchmark",
-        "-b",
+        default=False,
         help="Run benchmark instead of single inference",
     ),
     num_runs: int = typer.Option(
@@ -75,16 +75,14 @@ def run_command(
         help="Number of warmup runs",
     ),
     verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
+        default=False,
         help="Enable verbose output",
     ),
 ) -> None:
     """Run inference on a model.
-    
+
     This command loads a model and runs inference on the provided input data.
-    
+
     Examples:
         gpux run sentiment-analysis --input '{"text": "I love this!"}'
         gpux run image-classifier --file input.json
@@ -92,37 +90,36 @@ def run_command(
     """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     try:
         # Find model configuration
         model_path = _find_model_config(model_name, config_file)
         if not model_path:
             console.print(f"[red]Error: Model '{model_name}' not found[/red]")
-            raise typer.Exit(1)
-        
+            raise typer.Exit(1) from None
+
         # Parse configuration
         parser = GPUXConfigParser()
         config = parser.parse_file(model_path / config_file)
-        
+
         # Get model file path
         model_file = parser.get_model_path(model_path)
         if not model_file or not model_file.exists():
             console.print(f"[red]Error: Model file not found: {model_file}[/red]")
-            raise typer.Exit(1)
-        
+            raise typer.Exit(1) from None
+
         # Load input data
         input_data_dict = _load_input_data(input_data, input_file)
         if not input_data_dict:
             console.print("[red]Error: No input data provided[/red]")
-            raise typer.Exit(1)
-        
+            raise typer.Exit(1) from None
+
         # Initialize runtime
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-            
             task = progress.add_task("Loading model...", total=None)
             runtime = GPUXRuntime(
                 model_path=model_file,
@@ -130,133 +127,138 @@ def run_command(
                 **config.runtime.dict(),
             )
             progress.update(task, completed=100)
-        
+
         # Run inference or benchmark
         if benchmark:
             _run_benchmark(runtime, input_data_dict, num_runs, warmup_runs, output_file)
         else:
             _run_inference(runtime, input_data_dict, output_file)
-        
+
         # Cleanup
         runtime.cleanup()
-        
-    except Exception as e:
+
+    except (FileNotFoundError, ValueError, RuntimeError, json.JSONDecodeError) as e:
         console.print(f"[red]Run failed: {e}[/red]")
         if verbose:
             console.print_exception()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
-def _find_model_config(model_name: str, config_file: str) -> Optional[Path]:
+def _find_model_config(model_name: str, config_file: str) -> Path | None:
     """Find model configuration file.
-    
+
     Args:
         model_name: Name of the model
         config_file: Configuration file name
-        
+
     Returns:
         Path to model directory or None if not found
     """
     # Check current directory
-    current_dir = Path(".")
+    current_dir = Path()
     if (current_dir / config_file).exists():
         return current_dir
-    
+
     # Check if model_name is a directory
     model_dir = Path(model_name)
     if model_dir.is_dir() and (model_dir / config_file).exists():
         return model_dir
-    
+
     # Check .gpux directory for built models
     gpux_dir = Path(".gpux")
     if gpux_dir.exists():
         # Look for model info files
         for info_file in gpux_dir.glob("**/model_info.json"):
             try:
-                import json
-                with open(info_file) as f:
+                with info_file.open() as f:
                     info = json.load(f)
                 if info.get("name") == model_name:
                     return info_file.parent.parent
-            except Exception:
+            except (json.JSONDecodeError, OSError):
                 continue
-    
+
     return None
 
 
-def _load_input_data(input_data: Optional[str], input_file: Optional[str]) -> Optional[dict]:
+def _load_input_data(  # noqa: PLR0911
+    input_data: str | None, input_file: str | None
+) -> dict[str, Any] | None:
     """Load input data from various sources.
-    
+
     Args:
         input_data: Input data string or file path
         input_file: Input file path
-        
+
     Returns:
         Input data dictionary or None
     """
     if input_file:
         # Load from file
         try:
-            with open(input_file, "r") as f:
-                return json.load(f)
-        except Exception as e:
+            with Path(input_file).open() as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else None
+        except (json.JSONDecodeError, OSError) as e:
             console.print(f"[red]Error loading input file: {e}[/red]")
             return None
-    
+
     if input_data:
         if input_data.startswith("@"):
             # Load from file specified with @ prefix
             file_path = input_data[1:]
             try:
-                with open(file_path, "r") as f:
-                    return json.load(f)
-            except Exception as e:
+                with Path(file_path).open() as f:
+                    data = json.load(f)
+                    return data if isinstance(data, dict) else None
+            except (json.JSONDecodeError, OSError) as e:
                 console.print(f"[red]Error loading input file: {e}[/red]")
                 return None
         else:
             # Parse JSON string
             try:
-                return json.loads(input_data)
-            except Exception as e:
+                data = json.loads(input_data)
+                return data if isinstance(data, dict) else None
+            except json.JSONDecodeError as e:
                 console.print(f"[red]Error parsing input JSON: {e}[/red]")
                 return None
-    
+
     return None
 
 
-def _run_inference(runtime: GPUXRuntime, input_data: dict, output_file: Optional[str]) -> None:
+def _run_inference(
+    runtime: GPUXRuntime, input_data: dict[str, Any], output_file: str | None
+) -> None:
     """Run single inference.
-    
+
     Args:
         runtime: GPUX runtime instance
         input_data: Input data dictionary
         output_file: Output file path
     """
     console.print("[blue]Running inference...[/blue]")
-    
+
     # Convert input data to numpy arrays
-    import numpy as np
     numpy_input = {}
     for key, value in input_data.items():
         if isinstance(value, list):
             numpy_input[key] = np.array(value)
         else:
             numpy_input[key] = value
-    
+
     # Run inference
     results = runtime.infer(numpy_input)
-    
+
     # Convert results to JSON-serializable format
     output_data = {}
     for key, value in results.items():
-        if hasattr(value, 'tolist'):
+        if hasattr(value, "tolist"):
             output_data[key] = value.tolist()
         else:
             output_data[key] = value
-    
+
     # Display or save results
     if output_file:
-        with open(output_file, "w") as f:
+        with Path(output_file).open("w") as f:
             json.dump(output_data, f, indent=2)
         console.print(f"[green]Results saved to: {output_file}[/green]")
     else:
@@ -264,14 +266,14 @@ def _run_inference(runtime: GPUXRuntime, input_data: dict, output_file: Optional
 
 
 def _run_benchmark(
-    runtime: GPUXRuntime, 
-    input_data: dict, 
-    num_runs: int, 
+    runtime: GPUXRuntime,
+    input_data: dict[str, Any],
+    num_runs: int,
     warmup_runs: int,
-    output_file: Optional[str]
+    output_file: str | None,
 ) -> None:
     """Run benchmark.
-    
+
     Args:
         runtime: GPUX runtime instance
         input_data: Input data dictionary
@@ -279,25 +281,31 @@ def _run_benchmark(
         warmup_runs: Number of warmup runs
         output_file: Output file path
     """
-    console.print(f"[blue]Running benchmark with {num_runs} runs (warmup: {warmup_runs})...[/blue]")
-    
+    console.print(
+        f"[blue]Running benchmark with {num_runs} runs "
+        f"(warmup: {warmup_runs})...[/blue]"
+    )
+
     # Convert input data to numpy arrays
-    import numpy as np
     numpy_input = {}
     for key, value in input_data.items():
         if isinstance(value, list):
             numpy_input[key] = np.array(value)
         else:
             numpy_input[key] = value
-    
+
     # Run benchmark
     metrics = runtime.benchmark(numpy_input, num_runs, warmup_runs)
-    
+
     # Display benchmark results
-    benchmark_table = Table(title="Benchmark Results", show_header=True, header_style="bold magenta")
+    benchmark_table = Table(
+        title="Benchmark Results",
+        show_header=True,
+        header_style="bold magenta",
+    )
     benchmark_table.add_column("Metric", style="cyan")
     benchmark_table.add_column("Value", style="white")
-    
+
     for key, value in metrics.items():
         if "time" in key:
             benchmark_table.add_row(key.replace("_", " ").title(), f"{value:.2f} ms")
@@ -305,11 +313,11 @@ def _run_benchmark(
             benchmark_table.add_row(key.replace("_", " ").title(), f"{value:.1f}")
         else:
             benchmark_table.add_row(key.replace("_", " ").title(), f"{value:.4f}")
-    
+
     console.print(benchmark_table)
-    
+
     # Save results if requested
     if output_file:
-        with open(output_file, "w") as f:
+        with Path(output_file).open("w") as f:
             json.dump(metrics, f, indent=2)
         console.print(f"[green]Benchmark results saved to: {output_file}[/green]")

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -33,7 +33,7 @@ def serve_command(
         help="Port to serve on",
     ),
     host: str = typer.Option(
-        "0.0.0.0",
+        "0.0.0.0",  # noqa: S104
         "--host",
         "-h",
         help="Host to serve on",
@@ -44,29 +44,26 @@ def serve_command(
         "-c",
         help="Configuration file name",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         help="Preferred execution provider",
     ),
     workers: int = typer.Option(
-        1,
-        "--workers",
-        "-w",
+        default=1,
         help="Number of worker processes",
     ),
+    *,
     verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
+        default=False,
         help="Enable verbose output",
     ),
 ) -> None:
     """Start HTTP server for model serving.
-    
+
     This command starts a FastAPI server that provides REST API endpoints
     for model inference.
-    
+
     Examples:
         gpux serve sentiment-analysis
         gpux serve image-classifier --port 9000
@@ -74,24 +71,24 @@ def serve_command(
     """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     try:
         # Find model configuration
         model_path = _find_model_config(model_name, config_file)
         if not model_path:
             console.print(f"[red]Error: Model '{model_name}' not found[/red]")
-            raise typer.Exit(1)
-        
+            raise typer.Exit(1) from None
+
         # Parse configuration
         parser = GPUXConfigParser()
         config = parser.parse_file(model_path / config_file)
-        
+
         # Get model file path
         model_file = parser.get_model_path(model_path)
         if not model_file or not model_file.exists():
             console.print(f"[red]Error: Model file not found: {model_file}[/red]")
-            raise typer.Exit(1)
-        
+            raise typer.Exit(1) from None
+
         # Initialize runtime
         console.print("[blue]Loading model...[/blue]")
         runtime = GPUXRuntime(
@@ -99,100 +96,116 @@ def serve_command(
             provider=provider,
             **config.runtime.dict(),
         )
-        
+
         # Display server information
         _display_server_info(config, model_name, host, port, workers)
-        
+
         # Start server
         _start_server(runtime, config, host, port, workers)
-        
-    except Exception as e:
+
+    except (FileNotFoundError, ValueError, RuntimeError, ImportError) as e:
         console.print(f"[red]Serve failed: {e}[/red]")
         if verbose:
             console.print_exception()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
-def _find_model_config(model_name: str, config_file: str) -> Optional[Path]:
+def _find_model_config(model_name: str, config_file: str) -> Path | None:
     """Find model configuration file.
-    
+
     Args:
         model_name: Name of the model
         config_file: Configuration file name
-        
+
     Returns:
         Path to model directory or None if not found
     """
     # Check current directory
-    current_dir = Path(".")
+    current_dir = Path()
     if (current_dir / config_file).exists():
         return current_dir
-    
+
     # Check if model_name is a directory
     model_dir = Path(model_name)
     if model_dir.is_dir() and (model_dir / config_file).exists():
         return model_dir
-    
+
     # Check .gpux directory for built models
     gpux_dir = Path(".gpux")
     if gpux_dir.exists():
         # Look for model info files
         for info_file in gpux_dir.glob("**/model_info.json"):
             try:
-                with open(info_file) as f:
+                with info_file.open() as f:
                     info = json.load(f)
                 if info.get("name") == model_name:
                     return info_file.parent.parent
-            except Exception:
+            except (json.JSONDecodeError, OSError):
                 continue
-    
+
     return None
 
 
-def _display_server_info(config, model_name: str, host: str, port: int, workers: int) -> None:
+def _display_server_info(
+    config: Any, model_name: str, host: str, port: int, workers: int
+) -> None:
     """Display server information."""
-    
+
     # Model information
-    model_table = Table(title="Model Information", show_header=True, header_style="bold magenta")
+    model_table = Table(
+        title="Model Information",
+        show_header=True,
+        header_style="bold magenta",
+    )
     model_table.add_column("Property", style="cyan")
     model_table.add_column("Value", style="white")
-    
+
     model_table.add_row("Name", model_name)
     model_table.add_row("Version", config.version)
     model_table.add_row("Inputs", str(len(config.inputs)))
     model_table.add_row("Outputs", str(len(config.outputs)))
-    
+
     console.print(model_table)
-    
+
     # Server information
-    server_table = Table(title="Server Configuration", show_header=True, header_style="bold green")
+    server_table = Table(
+        title="Server Configuration",
+        show_header=True,
+        header_style="bold green",
+    )
     server_table.add_column("Property", style="cyan")
     server_table.add_column("Value", style="white")
-    
+
     server_table.add_row("Host", host)
     server_table.add_row("Port", str(port))
     server_table.add_row("Workers", str(workers))
     server_table.add_row("URL", f"http://{host}:{port}")
-    
+
     console.print(server_table)
-    
+
     # API endpoints
-    endpoints_table = Table(title="API Endpoints", show_header=True, header_style="bold blue")
+    endpoints_table = Table(
+        title="API Endpoints",
+        show_header=True,
+        header_style="bold blue",
+    )
     endpoints_table.add_column("Method", style="cyan")
     endpoints_table.add_column("Path", style="white")
     endpoints_table.add_column("Description", style="white")
-    
+
     endpoints_table.add_row("POST", "/predict", "Run inference")
     endpoints_table.add_row("GET", "/health", "Health check")
     endpoints_table.add_row("GET", "/info", "Model information")
     endpoints_table.add_row("GET", "/metrics", "Performance metrics")
-    
+
     console.print(endpoints_table)
 
 
-def _start_server(runtime: GPUXRuntime, config, host: str, port: int, workers: int) -> None:
+def _start_server(  # noqa: C901
+    runtime: GPUXRuntime, config: Any, host: str, port: int, workers: int
+) -> None:
     """Start the HTTP server.
-    
+
     Args:
         runtime: GPUX runtime instance
         config: Model configuration
@@ -201,48 +214,46 @@ def _start_server(runtime: GPUXRuntime, config, host: str, port: int, workers: i
         workers: Number of workers
     """
     try:
-        from fastapi import FastAPI, HTTPException
-        from fastapi.responses import JSONResponse
-        import uvicorn
-        import numpy as np
-        from typing import Dict, Any
-        
+        import numpy as np  # noqa: PLC0415
+        import uvicorn  # noqa: PLC0415
+        from fastapi import FastAPI, HTTPException  # noqa: PLC0415
+
         # Create FastAPI app
         app = FastAPI(
             title=f"GPUX Server - {config.name}",
             description=f"ML inference server for {config.name}",
             version=config.version,
         )
-        
+
         # Health check endpoint
-        @app.get("/health")
-        async def health_check():
+        @app.get("/health")  # type: ignore[misc]
+        async def health_check() -> dict[str, str]:
             """Health check endpoint."""
             return {"status": "healthy", "model": config.name}
-        
+
         # Model info endpoint
-        @app.get("/info")
-        async def model_info():
+        @app.get("/info")  # type: ignore[misc]
+        async def model_info() -> dict[str, Any]:
             """Get model information."""
             model_info = runtime.get_model_info()
             if not model_info:
                 raise HTTPException(status_code=500, detail="Model not loaded")
-            
+
             return model_info.to_dict()
-        
+
         # Metrics endpoint
-        @app.get("/metrics")
-        async def metrics():
+        @app.get("/metrics")  # type: ignore[misc]
+        async def metrics() -> dict[str, Any]:
             """Get performance metrics."""
             provider_info = runtime.get_provider_info()
             return {
                 "provider": provider_info,
                 "available_providers": runtime.get_available_providers(),
             }
-        
+
         # Prediction endpoint
-        @app.post("/predict")
-        async def predict(data: Dict[str, Any]):
+        @app.post("/predict")  # type: ignore[misc]
+        async def predict(data: dict[str, Any]) -> dict[str, Any]:
             """Run inference on input data."""
             try:
                 # Convert input data to numpy arrays
@@ -252,40 +263,43 @@ def _start_server(runtime: GPUXRuntime, config, host: str, port: int, workers: i
                         numpy_input[key] = np.array(value)
                     else:
                         numpy_input[key] = value
-                
+
                 # Run inference
                 results = runtime.infer(numpy_input)
-                
+            except (ValueError, RuntimeError, KeyError) as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
+            else:
                 # Convert results to JSON-serializable format
                 output_data = {}
                 for key, value in results.items():
-                    if hasattr(value, 'tolist'):
+                    if hasattr(value, "tolist"):
                         output_data[key] = value.tolist()
                     else:
                         output_data[key] = value
-                
+
                 return output_data
-                
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=str(e))
-        
+
         # Start server
-        console.print(f"\n[green]🚀 Starting GPUX server...[/green]")
+        console.print("\n[green]🚀 Starting GPUX server...[/green]")
         console.print(f"[dim]Server will be available at: http://{host}:{port}[/dim]")
-        console.print(f"[dim]Press Ctrl+C to stop the server[/dim]\n")
-        
+        console.print("[dim]Press Ctrl+C to stop the server[/dim]\n")
+
         uvicorn.run(
             app,
             host=host,
             port=port,
             workers=workers if workers > 1 else None,
-            log_level="info" if not logging.getLogger().isEnabledFor(logging.DEBUG) else "debug",
+            log_level=(
+                "info"
+                if not logging.getLogger().isEnabledFor(logging.DEBUG)
+                else "debug"
+            ),
         )
-        
-    except ImportError:
+
+    except ImportError as e:
         console.print("[red]Error: FastAPI and uvicorn are required for serving[/red]")
         console.print("[yellow]Install with: pip install fastapi uvicorn[/yellow]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
     except KeyboardInterrupt:
         console.print("\n[yellow]Server stopped by user[/yellow]")
     finally:

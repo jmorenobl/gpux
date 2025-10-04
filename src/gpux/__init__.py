@@ -8,10 +8,10 @@ __version__ = "0.1.0"
 __author__ = "GPUX Team"
 __email__ = "team@gpux.io"
 
-from gpux.core import GPUXRuntime, ExecutionProvider, ModelInfo
+from gpux.core import ExecutionProvider, GPUXRuntime, ModelInfo
 
 __all__ = [
+    "ExecutionProvider",
     "GPUXRuntime",
-    "ExecutionProvider", 
     "ModelInfo",
 ]

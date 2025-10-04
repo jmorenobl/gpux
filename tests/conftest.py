@@ -1,17 +1,17 @@
 """Pytest configuration and fixtures for GPUX tests."""
 
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import numpy as np
-import pytest
 import onnx
-from onnx import helper, TensorProto
+import pytest
+from onnx import TensorProto, helper
 
-from gpux.core.runtime import GPUXRuntime
-from gpux.core.providers import ProviderManager
 from gpux.config.parser import GPUXConfigParser
+from gpux.core.providers import ProviderManager
+from gpux.core.runtime import GPUXRuntime
 
 
 @pytest.fixture
@@ -25,37 +25,33 @@ def temp_dir() -> Generator[Path, None, None]:
 def simple_onnx_model(temp_dir: Path) -> Path:
     """Create a simple ONNX model for testing."""
     # Create a simple model: input -> add -> output
-    input_tensor = helper.make_tensor_value_info(
-        "input", TensorProto.FLOAT, [1, 2]
-    )
-    output_tensor = helper.make_tensor_value_info(
-        "output", TensorProto.FLOAT, [1, 2]
-    )
-    
+    input_tensor = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, 2])
+    output_tensor = helper.make_tensor_value_info("output", TensorProto.FLOAT, [1, 2])
+
     # Create a simple add node
     add_node = helper.make_node(
         "Add",
         inputs=["input", "input"],  # Add input to itself
         outputs=["output"],
-        name="add_node"
+        name="add_node",
     )
-    
+
     # Create the graph
     graph = helper.make_graph(
         nodes=[add_node],
         name="simple_model",
         inputs=[input_tensor],
-        outputs=[output_tensor]
+        outputs=[output_tensor],
     )
-    
+
     # Create the model
     model = helper.make_model(graph)
     model.opset_import[0].version = 11
-    
+
     # Save the model
     model_path = temp_dir / "simple_model.onnx"
     onnx.save(model, str(model_path))
-    
+
     return model_path
 
 
@@ -94,20 +90,18 @@ serving:
   batch_size: 1
   timeout: 5
 """
-    
+
     config_path = temp_dir / "gpux.yml"
-    with open(config_path, "w") as f:
+    with config_path.open("w") as f:
         f.write(config_content)
-    
+
     return config_path
 
 
 @pytest.fixture
 def sample_input_data() -> dict:
     """Create sample input data for testing."""
-    return {
-        "input": np.array([[1.0, 2.0]], dtype=np.float32)
-    }
+    return {"input": np.array([[1.0, 2.0]], dtype=np.float32)}
 
 
 @pytest.fixture

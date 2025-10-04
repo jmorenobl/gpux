@@ -349,6 +349,12 @@ serve = [
     { name = "uvicorn" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
@@ -376,6 +382,12 @@ requires-dist = [
     { name = "uvicorn", marker = "extra == 'serve'", specifier = ">=0.23.0" },
 ]
 provides-extras = ["dev", "ml", "serve"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.18.2" },
+    { name = "ruff", specifier = ">=0.13.3" },
+]
 
 [[package]]
 name = "h11"
