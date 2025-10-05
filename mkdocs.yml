@@ -1,0 +1,273 @@
+site_name: GPUX
+site_description: Docker-like GPU runtime for ML inference with universal GPU compatibility
+site_url: https://docs.gpux.io
+repo_url: https://github.com/gpux/gpux-runtime
+repo_name: gpux/gpux-runtime
+edit_uri: edit/main/docs/
+
+# Copyright
+copyright: Copyright &copy; 2025 GPUX Team
+
+# Theme Configuration
+theme:
+  name: material
+  language: en
+  logo: assets/images/logo.png
+  favicon: assets/images/favicon.png
+
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  features:
+    # Navigation
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+
+    # Table of contents
+    - toc.follow
+    - toc.integrate
+
+    # Search
+    - search.suggest
+    - search.highlight
+    - search.share
+
+    # Content
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+
+    # Header
+    - announce.dismiss
+
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - tags
+
+# Extensions
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Extra CSS and JavaScript
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/extra.js
+
+# Extra Configuration
+extra:
+  homepage: https://gpux.io
+
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gpux/gpux-runtime
+      name: GPUX on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/gpux/
+      name: GPUX on PyPI
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/gpux
+      name: GPUX Discord Community
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/gpux_io
+      name: GPUX on Twitter
+
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX  # Replace with actual GA4 property
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve by
+            <a href="https://github.com/gpux/gpux-runtime/issues/new" target="_blank" rel="noopener">opening an issue</a>.
+
+  version:
+    provider: mike
+    default: latest
+
+# Navigation
+nav:
+  - Home: index.md
+
+  - Tutorial:
+    - tutorial/index.md
+    - Installation: tutorial/installation.md
+    - First Steps: tutorial/first-steps.md
+    - Configuration: tutorial/configuration.md
+    - Running Inference: tutorial/running-inference.md
+    - Benchmarking: tutorial/benchmarking.md
+    - Serving Models: tutorial/serving.md
+
+  - User Guide:
+    - guide/index.md
+    - Working with Models: guide/models.md
+    - GPU Providers: guide/providers.md
+    - Inputs & Outputs: guide/inputs-outputs.md
+    - Data Preprocessing: guide/preprocessing.md
+    - Batch Inference: guide/batch-inference.md
+    - Python API: guide/python-api.md
+    - Error Handling: guide/error-handling.md
+
+  - Examples:
+    - examples/index.md
+    - Sentiment Analysis: examples/sentiment-analysis.md
+    - Image Classification: examples/image-classification.md
+    - Object Detection: examples/object-detection.md
+    - LLM Inference: examples/llm-inference.md
+    - Speech Recognition: examples/speech-recognition.md
+    - Embedding Generation: examples/embedding-generation.md
+    - Multi-Modal Models: examples/multi-modal.md
+
+  - Advanced:
+    - advanced/index.md
+    - Custom Providers: advanced/custom-providers.md
+    - Performance Optimization: advanced/optimization.md
+    - Memory Management: advanced/memory-management.md
+    - Profiling & Debugging: advanced/profiling.md
+    - Production Best Practices: advanced/production.md
+    - Monitoring: advanced/monitoring.md
+    - Security: advanced/security.md
+    - Troubleshooting: advanced/troubleshooting.md
+
+  - Deployment:
+    - deployment/index.md
+    - Docker: deployment/docker.md
+    - Kubernetes: deployment/kubernetes.md
+    - AWS: deployment/aws.md
+    - Google Cloud: deployment/gcp.md
+    - Azure: deployment/azure.md
+    - Edge Devices: deployment/edge.md
+    - Serverless: deployment/serverless.md
+
+  - Platforms:
+    - platforms/index.md
+    - NVIDIA GPUs: platforms/nvidia.md
+    - AMD GPUs: platforms/amd.md
+    - Apple Silicon: platforms/apple-silicon.md
+    - Intel GPUs: platforms/intel.md
+    - Windows DirectML: platforms/windows.md
+    - CPU Only: platforms/cpu.md
+
+  - API Reference:
+    - reference/index.md
+    - CLI Commands:
+      - reference/cli/build.md
+      - reference/cli/run.md
+      - reference/cli/serve.md
+      - reference/cli/inspect.md
+    - Configuration:
+      - reference/configuration/schema.md
+      - reference/configuration/model.md
+      - reference/configuration/inputs.md
+      - reference/configuration/outputs.md
+      - reference/configuration/runtime.md
+      - reference/configuration/serving.md
+      - reference/configuration/preprocessing.md
+    - Python API:
+      - reference/python-api/runtime.md
+      - reference/python-api/providers.md
+      - reference/python-api/models.md
+      - reference/python-api/config.md
+    - HTTP API:
+      - reference/http-api/endpoints.md
+      - reference/http-api/health.md
+      - reference/http-api/predict.md
+      - reference/http-api/info.md
+
+  - About:
+    - about/index.md
+    - vs Alternatives: about/alternatives.md
+    - Benchmarks: about/benchmarks.md
+    - Architecture: about/architecture.md
+    - Roadmap: about/roadmap.md
+    - Contributing: about/contributing.md
+    - Changelog: about/changelog.md
+    - License: about/license.md
+
+  - Help: help.md
+  - FAQ: faq.md
+  - Glossary: glossary.md
