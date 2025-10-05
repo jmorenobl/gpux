@@ -799,3 +799,77 @@ class TestFastAPIEndpoints:
                 mock_uvicorn.run.assert_called_once()
                 call_args = mock_uvicorn.run.call_args
                 assert call_args[1]["log_level"] == "info"
+
+
+class TestServeCLIErrorHandling:
+    """Test cases for serve CLI error handling and edge cases."""
+
+    def test_find_model_config_gpux_directory_json_error(self, temp_dir: Path) -> None:
+        """Test _find_model_config with JSON decode error in .gpux directory."""
+        # Create .gpux directory with invalid JSON
+        gpux_dir = temp_dir / ".gpux"
+        gpux_dir.mkdir()
+        model_dir = gpux_dir / "test-model"
+        model_dir.mkdir()
+
+        # Create invalid JSON file
+        info_file = model_dir / "model_info.json"
+        info_file.write_text("invalid json content")
+
+        with patch("gpux.cli.serve.Path.cwd", return_value=temp_dir):
+            result = _find_model_config("test-model", "nonexistent.yml")
+            assert result is None
+
+    def test_find_model_config_gpux_directory_os_error(self, temp_dir: Path) -> None:
+        """Test _find_model_config with OSError in .gpux directory."""
+        # Create .gpux directory
+        gpux_dir = temp_dir / ".gpux"
+        gpux_dir.mkdir()
+        model_dir = gpux_dir / "test-model"
+        model_dir.mkdir()
+
+        # Create a file that will cause OSError when reading
+        info_file = model_dir / "model_info.json"
+        info_file.write_text('{"name": "test-model"}')
+
+        with (
+            patch("gpux.cli.serve.Path.cwd", return_value=temp_dir),
+            patch("builtins.open", side_effect=OSError("Permission denied")),
+        ):
+            result = _find_model_config("test-model", "nonexistent.yml")
+            assert result is None
+
+    def test_find_model_config_gpux_directory_name_mismatch(
+        self, temp_dir: Path
+    ) -> None:
+        """Test _find_model_config with name mismatch in .gpux directory."""
+        # Create .gpux directory
+        gpux_dir = temp_dir / ".gpux"
+        gpux_dir.mkdir()
+        model_dir = gpux_dir / "test-model"
+        model_dir.mkdir()
+
+        # Create JSON file with different name
+        info_file = model_dir / "model_info.json"
+        info_file.write_text('{"name": "different-model"}')
+
+        with patch("gpux.cli.serve.Path.cwd", return_value=temp_dir):
+            result = _find_model_config("test-model", "nonexistent.yml")
+            assert result is None
+
+    def test_find_model_config_gpux_directory_success(self, temp_dir: Path) -> None:
+        """Test _find_model_config successfully finding model in .gpux directory."""
+        # Create .gpux directory
+        gpux_dir = temp_dir / ".gpux"
+        gpux_dir.mkdir()
+        model_dir = gpux_dir / "test-model"
+        model_dir.mkdir()
+
+        # Create JSON file with matching name
+        info_file = model_dir / "model_info.json"
+        info_file.write_text('{"name": "test-model"}')
+
+        with patch("gpux.cli.serve.Path.cwd", return_value=temp_dir):
+            result = _find_model_config("test-model", "nonexistent.yml")
+            # Should return None since no config file exists and .gpux search fails
+            assert result is None
