@@ -71,25 +71,17 @@ class ProviderManager:
             ]
 
         elif system == "windows":
-            # Windows - prioritize DirectML
-            priority = [
+            # Windows - prioritize DirectML, keep CPU as absolute last
+            front = [
                 ExecutionProvider.TENSORRT,
                 ExecutionProvider.CUDA,
                 ExecutionProvider.DIRECTML,
                 ExecutionProvider.OPENVINO,
-                ExecutionProvider.CPU,
-            ] + [
-                p
-                for p in priority
-                if p
-                not in [
-                    ExecutionProvider.TENSORRT,
-                    ExecutionProvider.CUDA,
-                    ExecutionProvider.DIRECTML,
-                    ExecutionProvider.OPENVINO,
-                    ExecutionProvider.CPU,
-                ]
             ]
+            middle = [
+                p for p in priority if p not in front and p is not ExecutionProvider.CPU
+            ]
+            priority = front + middle + [ExecutionProvider.CPU]
 
         return priority
 
