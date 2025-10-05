@@ -8,7 +8,10 @@ Optimize models for maximum throughput and minimal latency.
 
 ### 1. Model Optimization
 
-**Quantization:**
+#### Quantization
+
+Convert models to lower precision for better performance:
+
 ```python
 from onnxruntime.quantization import quantize_dynamic
 
@@ -23,6 +26,11 @@ quantize_dynamic(
 - 4x smaller models
 - 2-4x faster inference
 - Minimal accuracy loss
+
+**Types:**
+- **Dynamic Quantization**: Quantize weights to INT8 (easiest, good speedup)
+- **Static Quantization**: Quantize weights and activations (best performance)
+- **FP16**: Half precision (2x speedup on RTX GPUs)
 
 ### 2. Batch Size Tuning
 
