@@ -14,6 +14,7 @@ from gpux.utils.helpers import (
     format_bytes,
     format_time,
     get_gpu_info,
+    get_project_root,
     get_system_info,
     run_command,
     validate_file_extension,
@@ -180,6 +181,24 @@ class TestDependencies:
         for value in deps.values():
             assert isinstance(value, bool)
 
+    def test_check_dependencies_with_mocked_imports(self) -> None:
+        """Test check_dependencies function with mocked imports to cover all paths."""
+        with patch("builtins.__import__") as mock_import:
+            # Mock all imports to succeed
+            mock_import.return_value = MagicMock()
+
+            deps = check_dependencies()
+
+            # All dependencies should be True
+            assert deps["onnxruntime"] is True
+            assert deps["onnx"] is True
+            assert deps["numpy"] is True
+            assert deps["yaml"] is True
+            assert deps["click"] is True
+            assert deps["typer"] is True
+            assert deps["rich"] is True
+            assert deps["pydantic"] is True
+
     def test_get_gpu_info_no_onnxruntime(self) -> None:
         """Test get_gpu_info function without ONNX Runtime."""
         with patch("builtins.__import__", side_effect=ImportError):
@@ -333,3 +352,226 @@ class TestEdgeCases:
         assert result == nested_dir
         assert nested_dir.exists()
         assert nested_dir.is_dir()
+
+
+class TestCommandExecutionExceptionHandling:
+    """Test cases for command execution exception handling."""
+
+    def test_run_command_exception_with_stdout_stderr(self) -> None:
+        """Test run_command function with exception that has stdout and stderr."""
+        with patch("gpux.utils.helpers.subprocess.run") as mock_run:
+            # Mock subprocess.CalledProcessError with stdout and stderr
+            mock_run.side_effect = subprocess.CalledProcessError(
+                returncode=1,
+                cmd=["test", "command"],
+                output="stdout content",
+                stderr="stderr content",
+            )
+
+            with patch("gpux.utils.helpers.logger") as mock_logger:
+                with pytest.raises(subprocess.CalledProcessError):
+                    run_command(["test", "command"])
+
+                # Verify logger.exception was called for stdout and stderr
+                mock_logger.exception.assert_any_call(
+                    "Command failed: %s", "test command"
+                )
+                mock_logger.exception.assert_any_call("Exit code: %s", 1)
+                mock_logger.exception.assert_any_call("Stdout: %s", "stdout content")
+                mock_logger.exception.assert_any_call("Stderr: %s", "stderr content")
+
+    def test_run_command_exception_without_stdout_stderr(self) -> None:
+        """Test run_command function with exception that has no stdout and stderr."""
+        with patch("gpux.utils.helpers.subprocess.run") as mock_run:
+            # Mock subprocess.CalledProcessError without stdout and stderr
+            mock_run.side_effect = subprocess.CalledProcessError(
+                returncode=1, cmd=["test", "command"]
+            )
+
+            with patch("gpux.utils.helpers.logger") as mock_logger:
+                with pytest.raises(subprocess.CalledProcessError):
+                    run_command(["test", "command"])
+
+                # Verify logger.exception was called but not for stdout/stderr
+                mock_logger.exception.assert_any_call(
+                    "Command failed: %s", "test command"
+                )
+                mock_logger.exception.assert_any_call("Exit code: %s", 1)
+                # Should not call logger.exception for stdout/stderr when they're None
+                calls = [call[0][0] for call in mock_logger.exception.call_args_list]
+                assert "Stdout: %s" not in calls
+                assert "Stderr: %s" not in calls
+
+
+class TestGPUInfoExceptionHandling:
+    """Test cases for GPU info exception handling."""
+
+    def test_get_gpu_info_import_error(self) -> None:
+        """Test get_gpu_info function with ImportError."""
+        with (
+            patch("gpux.utils.helpers.logger") as mock_logger,
+            patch(
+                "builtins.__import__",
+                side_effect=ImportError("No module named 'onnxruntime'"),
+            ),
+        ):
+            result = get_gpu_info()
+
+            expected = {
+                "available": False,
+                "devices": [],
+                "provider": None,
+            }
+            assert result == expected
+            mock_logger.warning.assert_called_with(
+                "ONNX Runtime not available for GPU detection"
+            )
+
+    def test_get_gpu_info_runtime_error(self) -> None:
+        """Test get_gpu_info function with RuntimeError."""
+        with (
+            patch("gpux.utils.helpers.logger") as mock_logger,
+            patch("builtins.__import__") as mock_import,
+        ):
+            # Mock the import to succeed but then fail on get_available_providers
+            mock_ort = MagicMock()
+            mock_ort.get_available_providers.side_effect = RuntimeError(
+                "GPU not available"
+            )
+            mock_import.return_value = mock_ort
+
+            result = get_gpu_info()
+
+            expected = {
+                "available": False,
+                "devices": [],
+                "provider": None,
+            }
+            assert result == expected
+            mock_logger.warning.assert_called_with(
+                "Failed to detect GPU: %s",
+                mock_ort.get_available_providers.side_effect,
+            )
+
+    def test_get_gpu_info_attribute_error(self) -> None:
+        """Test get_gpu_info function with AttributeError."""
+        with (
+            patch("gpux.utils.helpers.logger") as mock_logger,
+            patch("builtins.__import__") as mock_import,
+        ):
+            # Mock the import to succeed but then fail on get_available_providers
+            mock_ort = MagicMock()
+            mock_ort.get_available_providers.side_effect = AttributeError(
+                "No attribute"
+            )
+            mock_import.return_value = mock_ort
+
+            result = get_gpu_info()
+
+            expected = {
+                "available": False,
+                "devices": [],
+                "provider": None,
+            }
+            assert result == expected
+            mock_logger.warning.assert_called_with(
+                "Failed to detect GPU: %s",
+                mock_ort.get_available_providers.side_effect,
+            )
+
+    def test_get_gpu_info_os_error(self) -> None:
+        """Test get_gpu_info function with OSError."""
+        with (
+            patch("gpux.utils.helpers.logger") as mock_logger,
+            patch("builtins.__import__") as mock_import,
+        ):
+            # Mock the import to succeed but then fail on get_available_providers
+            mock_ort = MagicMock()
+            mock_ort.get_available_providers.side_effect = OSError("Device not found")
+            mock_import.return_value = mock_ort
+
+            result = get_gpu_info()
+
+            expected = {
+                "available": False,
+                "devices": [],
+                "provider": None,
+            }
+            assert result == expected
+            mock_logger.warning.assert_called_with(
+                "Failed to detect GPU: %s",
+                mock_ort.get_available_providers.side_effect,
+            )
+
+    def test_get_gpu_info_inner_exception_handling(self) -> None:
+        """Test get_gpu_info function with inner try-except block."""
+        with patch("builtins.__import__") as mock_import:
+            # Mock the import to succeed
+            mock_ort = MagicMock()
+            mock_ort.get_available_providers.return_value = [
+                "CUDAExecutionProvider",
+                "CPUExecutionProvider",
+            ]
+            mock_ort.SessionOptions.return_value = MagicMock()
+            mock_ort.InferenceSession.side_effect = RuntimeError("Expected to fail")
+            mock_import.return_value = mock_ort
+
+            result = get_gpu_info()
+
+            # Should still return GPU info even if inner session creation fails
+            expected = {
+                "available": True,
+                "devices": [],
+                "provider": "CUDAExecutionProvider",
+                "providers": ["CUDAExecutionProvider"],
+            }
+            assert result == expected
+
+
+class TestProjectRoot:
+    """Test cases for get_project_root function."""
+
+    def test_get_project_root_finds_pyproject_toml(self, temp_dir: Path) -> None:
+        """Test get_project_root function finds pyproject.toml."""
+        # Create a pyproject.toml file in temp_dir
+        pyproject_file = temp_dir / "pyproject.toml"
+        pyproject_file.write_text("[project]\nname = 'test'")
+
+        with patch("gpux.utils.helpers.Path.cwd", return_value=temp_dir):
+            result = get_project_root()
+            assert result == temp_dir
+
+    def test_get_project_root_finds_setup_py(self, temp_dir: Path) -> None:
+        """Test get_project_root function finds setup.py."""
+        # Create a setup.py file in temp_dir
+        setup_file = temp_dir / "setup.py"
+        setup_file.write_text("from setuptools import setup\nsetup()")
+
+        with patch("gpux.utils.helpers.Path.cwd", return_value=temp_dir):
+            result = get_project_root()
+            assert result == temp_dir
+
+    def test_get_project_root_fallback_to_current(self) -> None:
+        """Test get_project_root function falls back to current directory."""
+        with patch("gpux.utils.helpers.Path.cwd") as mock_cwd:
+            mock_current = MagicMock()
+            mock_current.parents = []
+            mock_cwd.return_value = mock_current
+
+            result = get_project_root()
+            assert result == mock_current
+
+    def test_get_project_root_searches_parent_directories(self, temp_dir: Path) -> None:
+        """Test get_project_root function searches parent directories."""
+        # Create a pyproject.toml file in parent directory
+        parent_dir = temp_dir.parent
+        pyproject_file = parent_dir / "pyproject.toml"
+        pyproject_file.write_text("[project]\nname = 'test'")
+
+        # Create a subdirectory without pyproject.toml
+        sub_dir = temp_dir / "subdir"
+        sub_dir.mkdir()
+
+        with patch("gpux.utils.helpers.Path.cwd", return_value=sub_dir):
+            result = get_project_root()
+            assert result == parent_dir
