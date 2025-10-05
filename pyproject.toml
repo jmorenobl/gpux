@@ -5,7 +5,7 @@ description = "Docker-like GPU runtime for ML inference with universal GPU compa
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    {name = "GPUX Team", email = "team@gpux.io"}
+    {name = "Jorge MB", email = "jmorenobl@gmail.com"}
 ]
 license = {text = "MIT"}
 keywords = ["gpu", "ml", "inference", "onnx", "docker", "runtime"]

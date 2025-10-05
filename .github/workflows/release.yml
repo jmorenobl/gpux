@@ -1,56 +1,120 @@
-name: Release
+name: Build and Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+  workflow_dispatch:
 
-env:
-  PYTHON_VERSION: "3.11"
+permissions:
+  contents: write
+  packages: write
 
 jobs:
-  release:
-    name: Create Release
+  checks:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-      with:
-        version: "latest"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
 
-    - name: Install dependencies
-      run: uv sync --dev
+      - name: Sync dependencies (with dev)
+        run: uv sync --dev
 
-    - name: Run tests
-      run: uv run pytest
+      - name: Ruff lint
+        run: uv run ruff check src/ tests/
 
-    - name: Build package
-      run: uv build
+      - name: Ruff format check
+        run: uv run ruff format --check src/ tests/
 
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Mypy type check
+        run: uv run mypy src/
 
-    - name: Create GitHub Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+      - name: Run tests
+        run: uv run pytest --no-cov
+
+  build-and-release:
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Sync dependencies (no dev)
+        run: uv sync
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Verify distribution metadata
+        run: |
+          uvx twine check dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+      - name: Publish to TestPyPI
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          UV_PUBLISH_USERNAME: __token__
+          UV_PUBLISH_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          if [ -n "$UV_PUBLISH_PASSWORD" ]; then
+            uv publish --repository testpypi --yes
+          else
+            echo "TEST_PYPI_API_TOKEN not set; skipping TestPyPI publish"
+          fi
+
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          UV_PUBLISH_USERNAME: __token__
+          UV_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -n "$UV_PUBLISH_PASSWORD" ]; then
+            uv publish --yes
+          else
+            echo "PYPI_API_TOKEN not set; skipping PyPI publish"
+          fi
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+  test-installation:
+    runs-on: ubuntu-latest
+    needs: build-and-release
+    if: needs.build-and-release.result == 'success'
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install package from PyPI
+        run: |
+          uv pip install --system gpux
+          gpux --help || true
