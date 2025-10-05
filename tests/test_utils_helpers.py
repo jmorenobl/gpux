@@ -575,3 +575,195 @@ class TestProjectRoot:
         with patch("gpux.utils.helpers.Path.cwd", return_value=sub_dir):
             result = get_project_root()
             assert result == parent_dir
+
+
+class TestDependenciesIndividualImports:
+    """Test cases for individual dependency imports in check_dependencies."""
+
+    def test_check_dependencies_onnxruntime_import_error(self) -> None:
+        """Test check_dependencies with onnxruntime import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "onnxruntime":
+                    msg = "No module named 'onnxruntime'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["onnxruntime"] is False
+
+    def test_check_dependencies_onnx_import_error(self) -> None:
+        """Test check_dependencies with onnx import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "onnx":
+                    msg = "No module named 'onnx'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["onnx"] is False
+
+    def test_check_dependencies_numpy_import_error(self) -> None:
+        """Test check_dependencies with numpy import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "numpy":
+                    msg = "No module named 'numpy'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["numpy"] is False
+
+    def test_check_dependencies_yaml_import_error(self) -> None:
+        """Test check_dependencies with yaml import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "yaml":
+                    msg = "No module named 'yaml'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["yaml"] is False
+
+    def test_check_dependencies_click_import_error(self) -> None:
+        """Test check_dependencies with click import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "click":
+                    msg = "No module named 'click'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["click"] is False
+
+    def test_check_dependencies_typer_import_error(self) -> None:
+        """Test check_dependencies with typer import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "typer":
+                    msg = "No module named 'typer'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["typer"] is False
+
+    def test_check_dependencies_rich_import_error(self) -> None:
+        """Test check_dependencies with rich import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "rich":
+                    msg = "No module named 'rich'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["rich"] is False
+
+    def test_check_dependencies_pydantic_import_error(self) -> None:
+        """Test check_dependencies with pydantic import error."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name == "pydantic":
+                    msg = "No module named 'pydantic'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+            assert deps["pydantic"] is False
+
+    def test_check_dependencies_multiple_import_errors(self) -> None:
+        """Test check_dependencies with multiple import errors."""
+        with patch("builtins.__import__") as mock_import:
+
+            def import_side_effect(name, *_args, **_kwargs):
+                if name in [
+                    "onnxruntime",
+                    "onnx",
+                    "numpy",
+                    "yaml",
+                    "click",
+                    "typer",
+                    "rich",
+                    "pydantic",
+                ]:
+                    msg = f"No module named '{name}'"
+                    raise ImportError(msg)
+                return MagicMock()
+
+            mock_import.side_effect = import_side_effect
+
+            deps = check_dependencies()
+
+            # All dependencies should be False
+            assert deps["onnxruntime"] is False
+            assert deps["onnx"] is False
+            assert deps["numpy"] is False
+            assert deps["yaml"] is False
+            assert deps["click"] is False
+            assert deps["typer"] is False
+            assert deps["rich"] is False
+            assert deps["pydantic"] is False
+
+
+class TestProjectRootFallback:
+    """Test cases for get_project_root fallback scenarios."""
+
+    def test_get_project_root_fallback_to_current(self) -> None:
+        """Test get_project_root falls back to current directory."""
+        with patch("gpux.utils.helpers.Path.cwd") as mock_cwd:
+            mock_current = MagicMock()
+            mock_current.parents = []
+            mock_cwd.return_value = mock_current
+
+            result = get_project_root()
+            assert result == mock_current
+
+    def test_get_project_root_fallback_with_no_parents(self) -> None:
+        """Test get_project_root falls back when no parents have project files."""
+        with patch("gpux.utils.helpers.Path.cwd") as mock_cwd:
+            mock_current = MagicMock()
+            mock_current.parents = [MagicMock(), MagicMock()]
+            mock_cwd.return_value = mock_current
+
+            # Mock that no parent directories have project files
+            for parent in mock_current.parents:
+                mock_file = MagicMock()
+                mock_file.exists.return_value = False
+                parent.__truediv__ = lambda _, __, file=mock_file: file
+
+            # Mock current directory also has no project files
+            mock_current_file = MagicMock()
+            mock_current_file.exists.return_value = False
+            mock_current.__truediv__ = lambda _, __: mock_current_file
+
+            result = get_project_root()
+            assert result == mock_current
