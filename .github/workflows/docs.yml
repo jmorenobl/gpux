@@ -31,7 +31,7 @@ jobs:
           python-version: "3.11"
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
 
       - name: Install deps (dev + docs)
         run: uv sync --dev --group docs
