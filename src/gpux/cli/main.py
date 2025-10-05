@@ -34,7 +34,8 @@ app = typer.Typer(
     name="gpux",
     help="Docker-like GPU runtime for ML inference with universal GPU compatibility",
     add_completion=False,
-    rich_markup_mode="rich",
+    # Use plain help output to avoid Rich rendering issues in non-TTY CI
+    rich_markup_mode=None,
     no_args_is_help=False,
 )
 
