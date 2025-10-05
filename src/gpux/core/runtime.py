@@ -161,9 +161,9 @@ class GPUXRuntime:
                 raise ValueError(msg)  # noqa: TRY301
 
             # Run inference
-            start_time = time.time()
+            start_time = time.perf_counter()
             outputs = self._session.run(None, input_dict)
-            inference_time = time.time() - start_time
+            inference_time = time.perf_counter() - start_time
 
             # Prepare output dictionary
             output_dict = {}
@@ -239,25 +239,32 @@ class GPUXRuntime:
         # Benchmark runs
         times = []
         for i in range(num_runs):
-            start_time = time.time()
+            start_time = time.perf_counter()
             try:
                 self.infer(input_data)
-                times.append(time.time() - start_time)
+                dt = time.perf_counter() - start_time
+                # Clamp to timer resolution to avoid zero durations on some platforms
+                if dt <= 0.0:
+                    dt = 1e-9
+                times.append(dt)
             except Exception:
                 logger.exception("Benchmark run %d failed", i)
                 raise
 
         # Calculate statistics
         times_array = np.array(times)
+        mean_sec = float(np.mean(times_array)) if times_array.size else 0.0
+        if mean_sec <= 0.0:
+            mean_sec = 1e-9
         metrics = {
-            "mean_time_ms": float(np.mean(times_array) * 1000),
+            "mean_time_ms": float(mean_sec * 1000),
             "std_time_ms": float(np.std(times_array) * 1000),
             "min_time_ms": float(np.min(times_array) * 1000),
             "max_time_ms": float(np.max(times_array) * 1000),
             "median_time_ms": float(np.median(times_array) * 1000),
             "p95_time_ms": float(np.percentile(times_array, 95) * 1000),
             "p99_time_ms": float(np.percentile(times_array, 99) * 1000),
-            "throughput_fps": float(1.0 / np.mean(times_array)),
+            "throughput_fps": float(1.0 / mean_sec),
         }
 
         logger.info(
