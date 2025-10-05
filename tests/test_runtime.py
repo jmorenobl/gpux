@@ -171,6 +171,243 @@ class TestModelInspector:
         assert inspector.validate_input(wrong_input) is False
 
 
+class TestModelInfo:
+    """Test cases for ModelInfo class and related functionality."""
+
+    def test_input_spec_to_dict(self):
+        """Test InputSpec.to_dict method."""
+        from gpux.core.models import InputSpec
+
+        spec = InputSpec(
+            name="input",
+            type="float32",
+            shape=[1, 2],
+            required=True,
+            description="Test input",
+        )
+
+        result = spec.to_dict()
+        expected = {
+            "name": "input",
+            "type": "float32",
+            "shape": [1, 2],
+            "required": True,
+            "description": "Test input",
+        }
+        assert result == expected
+
+    def test_input_spec_from_dict(self):
+        """Test InputSpec.from_dict method."""
+        from gpux.core.models import InputSpec
+
+        data = {
+            "name": "input",
+            "type": "float32",
+            "shape": [1, 2],
+            "required": True,
+            "description": "Test input",
+        }
+
+        spec = InputSpec.from_dict(data)
+        assert spec.name == "input"
+        assert spec.type == "float32"
+        assert spec.shape == [1, 2]
+        assert spec.required is True
+        assert spec.description == "Test input"
+
+    def test_output_spec_to_dict(self):
+        """Test OutputSpec.to_dict method."""
+        from gpux.core.models import OutputSpec
+
+        spec = OutputSpec(
+            name="output",
+            type="float32",
+            shape=[1, 2],
+            labels=["class1", "class2"],
+            description="Test output",
+        )
+
+        result = spec.to_dict()
+        expected = {
+            "name": "output",
+            "type": "float32",
+            "shape": [1, 2],
+            "labels": ["class1", "class2"],
+            "description": "Test output",
+        }
+        assert result == expected
+
+    def test_output_spec_from_dict(self):
+        """Test OutputSpec.from_dict method."""
+        from gpux.core.models import OutputSpec
+
+        data = {
+            "name": "output",
+            "type": "float32",
+            "shape": [1, 2],
+            "labels": ["class1", "class2"],
+            "description": "Test output",
+        }
+
+        spec = OutputSpec.from_dict(data)
+        assert spec.name == "output"
+        assert spec.type == "float32"
+        assert spec.shape == [1, 2]
+        assert spec.labels == ["class1", "class2"]
+        assert spec.description == "Test output"
+
+    def test_model_info_to_dict(self, simple_onnx_model):
+        """Test ModelInfo.to_dict method."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        model_info = inspector.inspect(simple_onnx_model)
+
+        result = model_info.to_dict()
+
+        assert "name" in result
+        assert "version" in result
+        assert "format" in result
+        assert "path" in result
+        assert "size_bytes" in result
+        assert "size_mb" in result
+        assert "inputs" in result
+        assert "outputs" in result
+        assert "metadata" in result
+
+        # Check that size_mb is calculated correctly
+        expected_mb = round(result["size_bytes"] / (1024 * 1024), 2)
+        assert result["size_mb"] == expected_mb
+
+    def test_model_info_from_dict(self, simple_onnx_model):
+        """Test ModelInfo.from_dict method."""
+        from gpux.core.models import ModelInspector, ModelInfo
+
+        inspector = ModelInspector()
+        original_model_info = inspector.inspect(simple_onnx_model)
+
+        # Convert to dict and back
+        data = original_model_info.to_dict()
+        restored_model_info = ModelInfo.from_dict(data)
+
+        assert restored_model_info.name == original_model_info.name
+        assert restored_model_info.version == original_model_info.version
+        assert restored_model_info.format == original_model_info.format
+        assert restored_model_info.path == original_model_info.path
+        assert restored_model_info.size_bytes == original_model_info.size_bytes
+        assert len(restored_model_info.inputs) == len(original_model_info.inputs)
+        assert len(restored_model_info.outputs) == len(original_model_info.outputs)
+
+    def test_model_info_save_and_load(self, simple_onnx_model, temp_dir):
+        """Test ModelInfo.save and load methods."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        model_info = inspector.inspect(simple_onnx_model)
+
+        # Save to file
+        save_path = temp_dir / "model_info.json"
+        model_info.save(save_path)
+
+        # Load from file
+        loaded_model_info = model_info.__class__.load(save_path)
+
+        assert loaded_model_info.name == model_info.name
+        assert loaded_model_info.version == model_info.version
+        assert loaded_model_info.format == model_info.format
+        assert loaded_model_info.path == model_info.path
+        assert loaded_model_info.size_bytes == model_info.size_bytes
+
+
+class TestModelInspectorErrorHandling:
+    """Test cases for ModelInspector error handling and edge cases."""
+
+    def test_extract_metadata_no_session(self):
+        """Test _extract_metadata with no session."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        inspector._session = None
+
+        result = inspector._extract_metadata()
+        assert result == {}
+
+    def test_validate_input_no_session(self):
+        """Test validate_input with no session."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        inspector._session = None
+
+        result = inspector.validate_input(
+            {"input": np.array([[1.0, 2.0]], dtype=np.float32)}
+        )
+        assert result is False
+
+    def test_validate_input_missing_input_continue(self, simple_onnx_model):
+        """Test validate_input with missing input that should continue."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        inspector._session = inspector._create_session(simple_onnx_model)
+
+        # Create input data with missing input name
+        input_data = {"input": np.array([[1.0, 2.0]], dtype=np.float32)}
+
+        # Mock get_inputs to return an input that's not in the data
+        mock_inputs = [
+            type("MockInput", (), {"name": "missing_input", "type": "tensor(float)"})()
+        ]
+        inspector._session.get_inputs = lambda: mock_inputs
+
+        result = inspector.validate_input(input_data)
+        assert result is False
+
+    def test_validate_input_type_mismatch_warning(self, simple_onnx_model):
+        """Test validate_input with type mismatch that logs warning."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        inspector._session = inspector._create_session(simple_onnx_model)
+
+        # Create input data with wrong type
+        input_data = {"input": np.array([[1.0, 2.0]], dtype=np.int32)}
+
+        result = inspector.validate_input(input_data)
+        # Should still return True but log warning
+        assert result is True
+
+    def test_validate_input_shape_mismatch_error(self, simple_onnx_model):
+        """Test validate_input with shape mismatch that logs error."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        inspector._session = inspector._create_session(simple_onnx_model)
+
+        # Create input data with wrong shape
+        input_data = {"input": np.array([[1.0, 2.0, 3.0]], dtype=np.float32)}
+
+        result = inspector.validate_input(input_data)
+        assert result is False
+
+    def test_validate_input_exception_handling(self, simple_onnx_model):
+        """Test validate_input with exception during validation."""
+        from gpux.core.models import ModelInspector
+
+        inspector = ModelInspector()
+        inspector._session = inspector._create_session(simple_onnx_model)
+
+        # Mock get_inputs to raise an exception
+        inspector._session.get_inputs = lambda: (_ for _ in ()).throw(
+            Exception("Test exception")
+        )
+
+        result = inspector.validate_input(
+            {"input": np.array([[1.0, 2.0]], dtype=np.float32)}
+        )
+        assert result is False
+
+
 class TestGPUXRuntimeErrorHandling:
     """Test cases for GPUXRuntime error handling and edge cases."""
 
