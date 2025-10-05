@@ -73,11 +73,11 @@ jobs:
       - name: Publish to TestPyPI
         if: startsWith(github.ref, 'refs/tags/v')
         env:
-          UV_PUBLISH_USERNAME: __token__
-          UV_PUBLISH_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: |
-          if [ -n "$UV_PUBLISH_PASSWORD" ]; then
-            uv publish --repository testpypi --yes
+          if [ -n "$TWINE_PASSWORD" ]; then
+            uvx twine upload --repository-url https://test.pypi.org/legacy/ dist/*
           else
             echo "TEST_PYPI_API_TOKEN not set; skipping TestPyPI publish"
           fi
@@ -85,11 +85,11 @@ jobs:
       - name: Publish to PyPI
         if: startsWith(github.ref, 'refs/tags/v')
         env:
-          UV_PUBLISH_USERNAME: __token__
-          UV_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          if [ -n "$UV_PUBLISH_PASSWORD" ]; then
-            uv publish --yes
+          if [ -n "$TWINE_PASSWORD" ]; then
+            uvx twine upload dist/*
           else
             echo "PYPI_API_TOKEN not set; skipping PyPI publish"
           fi
