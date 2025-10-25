@@ -48,6 +48,8 @@ class HuggingFaceManager(ModelManager):
         model_id: str,
         revision: str = "main",
         cache_dir: Path | None = None,
+        *,
+        force_download: bool = False,
     ) -> ModelMetadata:
         """Pull a model from Hugging Face Hub.
 
@@ -55,6 +57,7 @@ class HuggingFaceManager(ModelManager):
             model_id: Model identifier (e.g., "microsoft/DialoGPT-medium")
             revision: Model revision/branch to pull
             cache_dir: Custom cache directory (overrides config)
+            force_download: Force re-download even if model exists locally
 
         Returns:
             Model metadata including file paths
@@ -65,7 +68,18 @@ class HuggingFaceManager(ModelManager):
             AuthenticationError: If authentication fails
         """
         try:
-            # Check if model exists
+            # Check if model exists locally and force_download is False
+            if not force_download:
+                cached_metadata = self._get_cached_metadata(
+                    model_id, revision, cache_dir
+                )
+                if cached_metadata:
+                    self.logger.info(
+                        "Model '%s' already exists locally, skipping download", model_id
+                    )
+                    return cached_metadata
+
+            # Check if model exists on Hugging Face Hub
             try:
                 model_info = self.api.model_info(model_id, revision=revision)
             except RepositoryNotFoundError as e:
@@ -89,6 +103,7 @@ class HuggingFaceManager(ModelManager):
                         repo_id=model_id,
                         revision=revision,
                         cache_dir=str(cache_path),
+                        force_download=force_download,
                         token=self.config.auth_token,
                     )
                 except Exception as e:
@@ -118,6 +133,66 @@ class HuggingFaceManager(ModelManager):
             raise RegistryError(msg) from e
         else:
             return metadata
+
+    def _get_cached_metadata(
+        self, model_id: str, revision: str, cache_dir: Path | None
+    ) -> ModelMetadata | None:
+        """Check if model is already cached and return metadata if available.
+
+        Args:
+            model_id: Model identifier
+            revision: Model revision
+            cache_dir: Custom cache directory
+
+        Returns:
+            ModelMetadata if cached, None otherwise
+        """
+        try:
+            cache_path = self.get_model_cache_path(model_id, revision, cache_dir)
+
+            # Check if essential files exist
+            config_file = cache_path / "config.json"
+            if not config_file.exists():
+                return None
+
+            # Check if we have a metadata file
+            metadata_file = cache_path / ".gpux_metadata.json"
+            if metadata_file.exists():
+                try:
+                    import json
+
+                    with metadata_file.open("r") as f:
+                        metadata_dict = json.load(f)
+                    return ModelMetadata(**metadata_dict)
+                except Exception as e:
+                    # If metadata file is corrupted, regenerate
+                    self.logger.debug("Failed to load cached metadata: %s", e)
+
+            # If no metadata file, check if we have model files
+            model_files = list(cache_path.glob("*.bin")) + list(
+                cache_path.glob("*.safetensors")
+            )
+            if not model_files:
+                return None
+
+            # Generate metadata from existing files
+            files = {f.name: f for f in cache_path.iterdir() if f.is_file()}
+            total_size = sum(f.stat().st_size for f in files.values())
+
+            return ModelMetadata(
+                model_id=model_id,
+                registry=self.config.name,
+                format=self._detect_model_format(cache_path),
+                files=files,
+                size_bytes=total_size,
+                tags=[],
+                metadata={},
+                revision=revision,
+            )
+
+        except Exception as e:
+            self.logger.debug("Failed to check cached metadata: %s", e)
+            return None
 
     def search_models(
         self,

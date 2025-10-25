@@ -16,6 +16,7 @@ except ImportError:
 
 from gpux.cli.build import build_command
 from gpux.cli.inspect import inspect_command
+from gpux.cli.pull import pull_command
 from gpux.cli.run import run_command
 from gpux.cli.serve import serve_command
 
@@ -41,6 +42,7 @@ app = typer.Typer(
 
 # Add commands
 app.command("build")(build_command)
+app.command("pull")(pull_command)
 app.command("run")(run_command)
 app.command("serve")(serve_command)
 app.command("inspect")(inspect_command)
@@ -65,6 +67,7 @@ def main(
 
     Examples:
         gpux build .                    # Build model from current directory
+        gpux pull microsoft/DialoGPT-medium  # Pull model from registry
         gpux run sentiment-analysis     # Run inference on a model
         gpux serve model-name --port 8080  # Start HTTP server
         gpux inspect model-name        # Inspect model information

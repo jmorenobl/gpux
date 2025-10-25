@@ -1,0 +1,397 @@
+"""PyTorch to ONNX conversion implementation."""
+
+from __future__ import annotations
+
+import logging
+import tempfile
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+import torch
+from transformers import AutoConfig, AutoModel, AutoTokenizer
+
+from gpux.core.conversion.base import ONNXConverter
+from gpux.core.conversion.optimizer import ConversionError, ModelOptimizer
+
+if TYPE_CHECKING:
+    from gpux.core.managers.base import ModelMetadata
+
+logger = logging.getLogger(__name__)
+
+
+class PyTorchConverter(ONNXConverter):
+    """PyTorch to ONNX converter using transformers and optimum."""
+
+    def __init__(self, cache_dir: Path | None = None) -> None:
+        """Initialize the PyTorch converter.
+
+        Args:
+            cache_dir: Directory to cache converted models
+        """
+        super().__init__(cache_dir)
+        self.optimizer = ModelOptimizer()
+
+    def can_convert(self, metadata: ModelMetadata) -> bool:
+        """Check if this converter can handle the given model.
+
+        Args:
+            metadata: Model metadata from registry
+
+        Returns:
+            True if this converter can handle PyTorch models
+        """
+        return metadata.format.lower() in ("pytorch", "pytorch_model", "safetensors")
+
+    def convert(
+        self,
+        metadata: ModelMetadata,
+        output_path: Path | None = None,
+        **kwargs: Any,
+    ) -> Path:
+        """Convert a PyTorch model to ONNX format.
+
+        Args:
+            metadata: Model metadata from registry
+            output_path: Output path for converted model (optional)
+            **kwargs: Additional conversion parameters
+
+        Returns:
+            Path to the converted ONNX model
+
+        Raises:
+            ConversionError: If conversion fails
+        """
+        if not self.can_convert(metadata):
+            msg = f"Cannot convert model format: {metadata.format}"
+            raise ConversionError(msg)
+
+        if output_path is None:
+            output_path = (
+                self.cache_dir / f"{metadata.model_id.replace('/', '--')}.onnx"
+            )
+
+        self.logger.info(
+            "Converting PyTorch model %s to ONNX: %s",
+            metadata.model_id,
+            output_path,
+        )
+
+        try:
+            # Try optimum first (preferred method)
+            onnx_path = self._convert_with_optimum(metadata, output_path, **kwargs)
+        except Exception as e:
+            self.logger.warning(
+                "Optimum conversion failed, falling back to torch.onnx.export: %s",
+                e,
+            )
+            # Fallback to manual torch.onnx.export
+            onnx_path = self._convert_with_torch(metadata, output_path, **kwargs)
+
+        # Optimize the converted model
+        try:
+            optimized_path = self.optimizer.optimize_model(onnx_path)
+            # Replace original with optimized version
+            optimized_path.replace(onnx_path)
+        except Exception as e:
+            self.logger.warning(
+                "Model optimization failed, using unoptimized model: %s", e
+            )
+
+        # Validate the final model
+        self.optimizer.validate_model(onnx_path)
+
+        self.logger.info("Successfully converted model to ONNX: %s", onnx_path)
+        return onnx_path
+
+    def _convert_with_optimum(
+        self,
+        metadata: ModelMetadata,
+        output_path: Path,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> Path:
+        """Convert using optimum library (preferred method).
+
+        Args:
+            metadata: Model metadata from registry
+            output_path: Output path for converted model
+            **kwargs: Additional conversion parameters
+
+        Returns:
+            Path to the converted ONNX model
+        """
+        try:
+            from optimum.exporters.onnx import (  # type: ignore[import-untyped]
+                main_export,
+            )
+
+            # Create temporary directory for optimum export
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+
+                # Export using optimum
+                config_path = metadata.files.get("config.json")
+                if not config_path:
+                    msg = "No config.json found in model files"
+                    raise ConversionError(msg) from None  # noqa: TRY301
+
+                main_export(
+                    model_name_or_path=str(config_path.parent),
+                    output=temp_path,
+                    task="auto",  # Auto-detect task
+                    device="cpu",  # Always use CPU for conversion
+                    fp16=False,  # Use FP32 for compatibility
+                )
+
+                # Find the generated ONNX file
+                onnx_files = list(temp_path.glob("**/*.onnx"))
+                if not onnx_files:
+                    msg = "No ONNX file generated by optimum"
+                    raise ConversionError(msg) from None  # noqa: TRY301
+
+                # Copy to final location
+                onnx_files[0].rename(output_path)
+
+                return output_path
+
+        except ImportError:
+            msg = "optimum library not available"
+            raise ConversionError(msg) from None
+        except Exception as e:
+            msg = f"Optimum conversion failed: {e}"
+            raise ConversionError(msg) from e
+
+    def _convert_with_torch(
+        self,
+        metadata: ModelMetadata,
+        output_path: Path,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> Path:
+        """Convert using torch.onnx.export (fallback method).
+
+        Args:
+            metadata: Model metadata from registry
+            output_path: Output path for converted model
+            **kwargs: Additional conversion parameters
+
+        Returns:
+            Path to the converted ONNX model
+        """
+        try:
+            # Load model and tokenizer
+            model_path = metadata.files.get("config.json")
+            if not model_path:
+                msg = "No config.json found in model files"
+                raise ConversionError(msg) from None  # noqa: TRY301
+
+            model_path = model_path.parent
+            if not model_path.exists():
+                msg = f"Model path not found: {model_path}"
+                raise ConversionError(msg) from None  # noqa: TRY301
+
+            # model_path is already a Path object from .parent
+
+            # Load model from local files (already downloaded by HuggingFaceManager)
+            model = AutoModel.from_pretrained(str(model_path), local_files_only=True)  # nosec B615
+            model.eval()
+
+            # Load tokenizer for input shapes
+            try:
+                tokenizer = AutoTokenizer.from_pretrained(
+                    str(model_path), local_files_only=True
+                )  # nosec B615
+            except Exception:
+                # Fallback to basic tokenizer
+                tokenizer = None
+
+            # Get input shapes
+            input_shapes = self.get_input_shapes(metadata)
+            if not input_shapes:
+                # Default shapes for common models
+                input_shapes = self._get_default_input_shapes(metadata, tokenizer)
+
+            # Create dummy inputs
+            dummy_inputs = self._create_dummy_inputs(input_shapes, tokenizer)
+
+            # Export to ONNX
+            torch.onnx.export(
+                model,
+                dummy_inputs,
+                str(output_path),
+                export_params=True,
+                opset_version=11,  # Use ONNX opset 11 for compatibility
+                do_constant_folding=True,
+                input_names=list(input_shapes.keys()),
+                output_names=self._get_output_names(metadata),
+                dynamic_axes=self._get_dynamic_axes(input_shapes),
+            )
+
+            return output_path  # noqa: TRY300
+
+        except Exception as e:
+            msg = f"Torch conversion failed: {e}"
+            raise ConversionError(msg) from e
+
+    def get_input_shapes(self, metadata: ModelMetadata) -> dict[str, list[int]]:
+        """Get input shapes for the model.
+
+        Args:
+            metadata: Model metadata from registry
+
+        Returns:
+            Dictionary mapping input names to shapes
+        """
+        try:
+            config_path = metadata.files.get("config.json")
+            if not config_path or not config_path.exists():
+                return {}
+
+            config = AutoConfig.from_pretrained(
+                str(config_path.parent), local_files_only=True
+            )  # nosec B615
+            return self._extract_input_shapes_from_config(config)
+
+        except Exception as e:
+            self.logger.warning("Failed to extract input shapes from config: %s", e)
+            return {}
+
+    def get_output_shapes(self, metadata: ModelMetadata) -> dict[str, list[int]]:
+        """Get output shapes for the model.
+
+        Args:
+            metadata: Model metadata from registry
+
+        Returns:
+            Dictionary mapping output names to shapes
+        """
+        # For most transformer models, output shapes depend on input shapes
+        # This is a simplified implementation
+        input_shapes = self.get_input_shapes(metadata)
+        if not input_shapes:
+            return {}
+
+        # Common output shapes for transformer models
+        batch_size = input_shapes.get("input_ids", [1])[0]
+        seq_len = input_shapes.get("input_ids", [1, 128])[1]
+        hidden_size = 768  # Default hidden size
+
+        return {
+            "last_hidden_state": [batch_size, seq_len, hidden_size],
+            "pooler_output": [batch_size, hidden_size],
+        }
+
+    def _extract_input_shapes_from_config(self, config: Any) -> dict[str, list[int]]:
+        """Extract input shapes from model config.
+
+        Args:
+            config: Model configuration
+
+        Returns:
+            Dictionary mapping input names to shapes
+        """
+        shapes = {}
+
+        # Common attributes for input shapes
+        if hasattr(config, "max_position_embeddings"):
+            max_len = config.max_position_embeddings
+        elif hasattr(config, "n_positions"):
+            max_len = config.n_positions
+        else:
+            max_len = 512  # Default sequence length
+
+        # Default batch size
+        batch_size = 1
+
+        # Input IDs (most common input)
+        if hasattr(config, "vocab_size"):
+            shapes["input_ids"] = [batch_size, max_len]
+
+        # Attention mask
+        shapes["attention_mask"] = [batch_size, max_len]
+
+        # Token type IDs (for some models)
+        if hasattr(config, "type_vocab_size"):
+            shapes["token_type_ids"] = [batch_size, max_len]
+
+        return shapes
+
+    def _get_default_input_shapes(
+        self,
+        metadata: ModelMetadata,  # noqa: ARG002  # noqa: ARG002  # noqa: ARG002
+        tokenizer: Any | None = None,  # noqa: ARG002  # noqa: ARG002
+    ) -> dict[str, list[int]]:
+        """Get default input shapes when config parsing fails.
+
+        Args:
+            metadata: Model metadata from registry
+            tokenizer: Tokenizer instance (optional)
+
+        Returns:
+            Dictionary mapping input names to shapes
+        """
+        # Default shapes for common models
+        return {
+            "input_ids": [1, 128],  # batch_size=1, seq_len=128
+            "attention_mask": [1, 128],
+        }
+
+    def _create_dummy_inputs(
+        self,
+        input_shapes: dict[str, list[int]],
+        tokenizer: Any | None = None,  # noqa: ARG002
+    ) -> tuple[torch.Tensor, ...]:
+        """Create dummy inputs for ONNX export.
+
+        Args:
+            input_shapes: Dictionary mapping input names to shapes
+            tokenizer: Tokenizer instance (optional)
+
+        Returns:
+            Tuple of dummy input tensors
+        """
+        dummy_inputs = []
+
+        for input_name, shape in input_shapes.items():
+            if input_name == "input_ids":
+                # Use token IDs (0-1000 range)
+                dummy_input = torch.randint(0, 1000, shape, dtype=torch.long)
+            elif input_name in ("attention_mask", "token_type_ids"):
+                # Use binary values
+                dummy_input = torch.ones(shape, dtype=torch.long)
+            else:
+                # Default to random float values
+                dummy_input = torch.randn(shape, dtype=torch.float32)
+
+            dummy_inputs.append(dummy_input)
+
+        return tuple(dummy_inputs)
+
+    def _get_output_names(self, metadata: ModelMetadata) -> list[str]:  # noqa: ARG002
+        """Get output names for the model.
+
+        Args:
+            metadata: Model metadata from registry
+
+        Returns:
+            List of output names
+        """
+        # Common output names for transformer models
+        return ["last_hidden_state", "pooler_output"]
+
+    def _get_dynamic_axes(
+        self, input_shapes: dict[str, list[int]]
+    ) -> dict[str, dict[int, str]]:
+        """Get dynamic axes for ONNX export.
+
+        Args:
+            input_shapes: Dictionary mapping input names to shapes
+
+        Returns:
+            Dictionary defining dynamic axes
+        """
+        dynamic_axes = {}
+
+        for input_name, shape in input_shapes.items():
+            if len(shape) >= 2:  # Has batch and sequence dimensions
+                dynamic_axes[input_name] = {0: "batch_size", 1: "sequence_length"}
+
+        return dynamic_axes

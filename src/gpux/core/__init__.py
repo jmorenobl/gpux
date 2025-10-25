@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from gpux.core.conversion import (
+    ConfigGenerator,
+    ModelOptimizer,
+    ONNXConverter,
+    PyTorchConverter,
+)
 from gpux.core.managers import (
     AuthenticationError,
     ConversionError,
@@ -19,6 +25,7 @@ from gpux.core.runtime import GPUXRuntime
 
 __all__ = [
     "AuthenticationError",
+    "ConfigGenerator",
     "ConversionError",
     "ExecutionProvider",
     "GPUXRuntime",
@@ -28,8 +35,11 @@ __all__ = [
     "ModelManager",
     "ModelMetadata",
     "ModelNotFoundError",
+    "ModelOptimizer",
     "NetworkError",
+    "ONNXConverter",
     "ProviderManager",
+    "PyTorchConverter",
     "RegistryConfig",
     "RegistryError",
 ]

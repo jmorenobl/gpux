@@ -82,6 +82,8 @@ class ModelManager(ABC):
         model_id: str,
         revision: str = "main",
         cache_dir: Path | None = None,
+        *,
+        force_download: bool = False,
     ) -> ModelMetadata:
         """Pull a model from the registry.
 
@@ -89,6 +91,7 @@ class ModelManager(ABC):
             model_id: Model identifier (e.g., "microsoft/DialoGPT-medium")
             revision: Model revision/branch to pull
             cache_dir: Custom cache directory (overrides config)
+            force_download: Force re-download even if model exists locally
 
         Returns:
             Model metadata including file paths
