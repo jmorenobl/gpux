@@ -172,6 +172,26 @@ logs/
 temp/
 tmp/
 
+# Development tracking - hybrid approach
+# Keep important decisions and completed work in version control
+# Ignore working drafts and temporary files
+development/*_draft.md
+development/*_temp.md
+development/*_working.md
+development/*_notes.md
+development/*_scratch.md
+development/personal/
+development/private/
+development/notes/
+development/temp/
+development/tmp/
+development/working/
+development/*.zip
+development/*.tar.gz
+development/*.pdf
+development/*.docx
+development/*.xlsx
+
 # OS specific
 .DS_Store
 .DS_Store?
