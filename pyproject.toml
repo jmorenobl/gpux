@@ -40,7 +40,8 @@ dev = [
     "black>=23.0.0",
     "ruff>=0.13.3",
     "mypy>=1.18.2",
-    "pre-commit>=3.0.0",
+    "pre-commit>=4.0.0",
+    "bandit[toml]>=1.8.6",
 ]
 docs = [
     "mkdocs-material>=9.6.21",
@@ -232,3 +233,14 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    ".venv",
+    ".git",
+    "__pycache__",
+    "htmlcov",
+    "site",
+]
+skips = ["B101"]  # Skip assert_used test

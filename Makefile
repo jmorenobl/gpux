@@ -55,7 +55,6 @@ update-deps: ## Update dependencies
 
 security: ## Run security checks
 	uv run ruff check --select S src/ tests/
-	uv add bandit[toml] --dev
 	uv run bandit -r src/
 
 docs: ## Generate documentation

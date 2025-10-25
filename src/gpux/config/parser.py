@@ -79,7 +79,7 @@ class ServingConfig(BaseModel):
     """Serving configuration for GPUX."""
 
     port: int = 8080
-    host: str = "0.0.0.0"  # noqa: S104
+    host: str = "127.0.0.1"
     batch_size: int = 1
     timeout: int = 5
     max_workers: int = 4

@@ -33,7 +33,7 @@ def serve_command(
         help="Port to serve on",
     ),
     host: str = typer.Option(
-        "0.0.0.0",  # noqa: S104
+        "127.0.0.1",
         "--host",
         "-h",
         help="Host to serve on",
