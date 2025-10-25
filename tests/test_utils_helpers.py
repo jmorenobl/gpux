@@ -1,10 +1,7 @@
 """Tests for utils helpers functionality."""
 
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from gpux.utils.helpers import (
     check_dependencies,
@@ -16,7 +13,6 @@ from gpux.utils.helpers import (
     get_gpu_info,
     get_project_root,
     get_system_info,
-    run_command,
     validate_file_extension,
     validate_gpuxfile,
 )
@@ -122,42 +118,6 @@ class TestFileOperations:
         """Test validate_file_extension function with string path."""
         assert validate_file_extension("test.onnx", [".onnx"]) is True
         assert validate_file_extension("test.txt", [".onnx"]) is False
-
-
-class TestCommandExecution:
-    """Test cases for command execution functions."""
-
-    def test_run_command_success(self) -> None:
-        """Test run_command function with successful command."""
-        result = run_command(["echo", "test"], capture_output=True)
-
-        assert result.returncode == 0
-        assert result.stdout.strip() == "test"
-
-    def test_run_command_failure(self) -> None:
-        """Test run_command function with failing command."""
-        with pytest.raises(subprocess.CalledProcessError):
-            run_command(["false"], capture_output=True)
-
-    def test_run_command_no_check(self) -> None:
-        """Test run_command function with check=False."""
-        result = run_command(["false"], capture_output=True, check=False)
-
-        assert result.returncode != 0
-
-    def test_run_command_no_capture(self) -> None:
-        """Test run_command function without capturing output."""
-        result = run_command(["echo", "test"], capture_output=False)
-
-        assert result.returncode == 0
-        assert result.stdout is None
-
-    def test_run_command_with_cwd(self, temp_dir: Path) -> None:
-        """Test run_command function with working directory."""
-        result = run_command(["pwd"], capture_output=True, cwd=temp_dir)
-
-        assert result.returncode == 0
-        assert str(temp_dir) in result.stdout
 
 
 class TestDependencies:
@@ -329,11 +289,6 @@ class TestEdgeCases:
         result = format_time(3600.0)  # 1 hour
         assert "s" in result
 
-    def test_run_command_empty_command(self) -> None:
-        """Test run_command function with empty command."""
-        with pytest.raises((subprocess.CalledProcessError, IndexError)):
-            run_command([], capture_output=True)
-
     def test_find_files_empty_directory(self, temp_dir: Path) -> None:
         """Test find_files function with empty directory."""
         files = find_files(temp_dir, "*.txt")
@@ -352,55 +307,6 @@ class TestEdgeCases:
         assert result == nested_dir
         assert nested_dir.exists()
         assert nested_dir.is_dir()
-
-
-class TestCommandExecutionExceptionHandling:
-    """Test cases for command execution exception handling."""
-
-    def test_run_command_exception_with_stdout_stderr(self) -> None:
-        """Test run_command function with exception that has stdout and stderr."""
-        with patch("gpux.utils.helpers.subprocess.run") as mock_run:
-            # Mock subprocess.CalledProcessError with stdout and stderr
-            mock_run.side_effect = subprocess.CalledProcessError(
-                returncode=1,
-                cmd=["test", "command"],
-                output="stdout content",
-                stderr="stderr content",
-            )
-
-            with patch("gpux.utils.helpers.logger") as mock_logger:
-                with pytest.raises(subprocess.CalledProcessError):
-                    run_command(["test", "command"])
-
-                # Verify logger.exception was called for stdout and stderr
-                mock_logger.exception.assert_any_call(
-                    "Command failed: %s", "test command"
-                )
-                mock_logger.exception.assert_any_call("Exit code: %s", 1)
-                mock_logger.exception.assert_any_call("Stdout: %s", "stdout content")
-                mock_logger.exception.assert_any_call("Stderr: %s", "stderr content")
-
-    def test_run_command_exception_without_stdout_stderr(self) -> None:
-        """Test run_command function with exception that has no stdout and stderr."""
-        with patch("gpux.utils.helpers.subprocess.run") as mock_run:
-            # Mock subprocess.CalledProcessError without stdout and stderr
-            mock_run.side_effect = subprocess.CalledProcessError(
-                returncode=1, cmd=["test", "command"]
-            )
-
-            with patch("gpux.utils.helpers.logger") as mock_logger:
-                with pytest.raises(subprocess.CalledProcessError):
-                    run_command(["test", "command"])
-
-                # Verify logger.exception was called but not for stdout/stderr
-                mock_logger.exception.assert_any_call(
-                    "Command failed: %s", "test command"
-                )
-                mock_logger.exception.assert_any_call("Exit code: %s", 1)
-                # Should not call logger.exception for stdout/stderr when they're None
-                calls = [call[0][0] for call in mock_logger.exception.call_args_list]
-                assert "Stdout: %s" not in calls
-                assert "Stderr: %s" not in calls
 
 
 class TestGPUInfoExceptionHandling:

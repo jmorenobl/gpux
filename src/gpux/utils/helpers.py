@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import platform
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -111,58 +110,6 @@ def validate_file_extension(file_path: str | Path, valid_extensions: list[str]) 
     """
     file_path = Path(file_path)
     return any(str(file_path).endswith(ext) for ext in valid_extensions)
-
-
-def run_command(
-    command: list[str],
-    cwd: str | Path | None = None,
-    *,
-    capture_output: bool = True,
-    check: bool = True,
-) -> subprocess.CompletedProcess:
-    """Run a command and return the result.
-
-    Args:
-        command: Command to run as list of strings
-        cwd: Working directory
-        capture_output: Whether to capture stdout/stderr
-        check: Whether to raise exception on non-zero exit code
-
-    Returns:
-        CompletedProcess object
-
-    Raises:
-        subprocess.CalledProcessError: If command fails and check=True
-    """
-    # Guard empty command to align with test expectations on Windows
-    if not command:
-        # Trigger the expected exception path in tests
-        msg = "Empty command"
-        raise IndexError(msg)
-
-    # Normalize working directory
-    norm_cwd = str(Path(cwd)) if cwd is not None else None
-
-    # Windows compatibility: map common POSIX commands
-    if platform.system().lower() == "windows" and command and command[0] == "pwd":
-        command = ["cmd", "/c", "cd"]
-
-    try:
-        return subprocess.run(
-            command,
-            cwd=norm_cwd,
-            capture_output=capture_output,
-            check=check,
-            text=True,
-        )
-    except subprocess.CalledProcessError as e:
-        logger.exception("Command failed: %s", " ".join(command))
-        logger.exception("Exit code: %s", e.returncode)
-        if e.stdout:
-            logger.exception("Stdout: %s", e.stdout)
-        if e.stderr:
-            logger.exception("Stderr: %s", e.stderr)
-        raise
 
 
 def check_dependencies() -> dict[str, bool]:
