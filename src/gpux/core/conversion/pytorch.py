@@ -120,7 +120,7 @@ class PyTorchConverter(ONNXConverter):
             Path to the converted ONNX model
         """
         try:
-            from optimum.exporters.onnx import (  # type: ignore[import-untyped]
+            from optimum.exporters.onnx import (
                 main_export,
             )
 
