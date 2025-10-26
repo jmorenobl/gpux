@@ -8,6 +8,15 @@ This directory contains all brainstorming, feature ideas, and concept exploratio
 - `technical-ideas/` - Technical concepts and architectural ideas
 - `research-notes/` - Research findings and external inspiration
 
+## Recent Additions
+
+### Technical Ideas (2025-01-27)
+
+- **Dynamic ONNX Opset Selection** - Intelligent opset version selection based on model architecture and runtime capabilities
+- **Enhanced Conversion Warning Suppression** - Comprehensive warning management system for cleaner user experience
+- **ONNX Runtime Metadata Extraction Robustness** - Robust metadata extraction with safe attribute access and fallback values
+- **Modern CoreML Execution Provider Configuration** - Update CoreML config to use modern ONNX Runtime options (ModelFormat, MLComputeUnits)
+
 ## Idea Lifecycle
 
 1. **Capture** - Document the idea with context and motivation
