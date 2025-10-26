@@ -33,7 +33,12 @@ jobs:
         version: "latest"
 
     - name: Install dependencies
-      run: uv sync --dev
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          uv sync --dev --extra tensorflow
+        else
+          uv sync --dev
+        fi
 
     - name: Run linting
       run: uv run ruff check src/ tests/
@@ -43,6 +48,30 @@ jobs:
 
     - name: Run tests
       run: uv run pytest --cov=src/gpux --cov-report=xml --cov-report=html
+
+    - name: Test TensorFlow functionality (Linux only)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        echo "Testing TensorFlow converter on Linux..."
+        uv run python -c "
+        from gpux.core.conversion.tensorflow import TensorFlowConverter
+        converter = TensorFlowConverter()
+        print('TensorFlow converter created successfully')
+        "
+
+    - name: Verify TensorFlow not available (Windows/macOS)
+      if: matrix.os != 'ubuntu-latest'
+      run: |
+        echo "Verifying TensorFlow is not installed on ${{ matrix.os }}..."
+        uv run python -c "
+        try:
+            from gpux.core.conversion.tensorflow import TensorFlowConverter
+            converter = TensorFlowConverter()
+            print('ERROR: TensorFlow should not be available')
+            exit(1)
+        except ImportError as e:
+            print(f'SUCCESS: TensorFlow correctly not available: {e}')
+        "
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -73,7 +102,7 @@ jobs:
         version: "latest"
 
     - name: Install dependencies
-      run: uv sync --dev
+      run: uv sync --dev --extra tensorflow
 
     - name: Build package
       run: uv build
@@ -103,7 +132,7 @@ jobs:
         version: "latest"
 
     - name: Install dependencies
-      run: uv sync --dev
+      run: uv sync --dev --extra tensorflow
 
     - name: Run security scan
       run: uv run ruff check --select S src/ tests/
