@@ -293,7 +293,7 @@ class TestTensorFlowConverter:
                     metadata, Path(self.temp_dir / "output.onnx")
                 )
 
-            assert "tf2onnx is required" in str(exc_info.value)
+            assert "tf2onnx conversion failed" in str(exc_info.value)
 
     def test_convert_with_tf2onnx_no_model_file(self) -> None:
         """Test conversion when no model file is found."""
