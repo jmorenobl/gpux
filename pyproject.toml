@@ -41,12 +41,12 @@ dependencies = [
     "opencv-python>=4.8.0",
     "scikit-learn>=1.3.0",
     "optimum[onnxruntime]>=1.14.0",
-    "tf2onnx>=1.15.0",
 ]
 
 [project.optional-dependencies]
 tensorflow = [
     "tensorflow>=2.13.0",
+    "tf2onnx>=1.15.0",
 ]
 
 [dependency-groups]
@@ -218,6 +218,7 @@ module = [
     "PIL.*",
     # Optional dependencies
     "tensorflow.*",
+    "tf2onnx.*",
 ]
 ignore_missing_imports = true
 

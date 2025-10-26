@@ -12,6 +12,11 @@ try:
 except ImportError:
     tf = None  # type: ignore[assignment]
 
+try:
+    import tf2onnx
+except ImportError:
+    tf2onnx = None
+
 from gpux.core.conversion.base import ONNXConverter
 from gpux.core.conversion.optimizer import ConversionError, ModelOptimizer
 
@@ -134,14 +139,12 @@ class TensorFlowConverter(ONNXConverter):
         Raises:
             ConversionError: If conversion fails
         """
-        try:
-            import tf2onnx
-        except ImportError as e:
+        if tf2onnx is None:
             msg = (
                 "tf2onnx is required for TensorFlow to ONNX conversion. "
-                "Install with: pip install tf2onnx"
+                "Install with: pip install gpux[tensorflow]"
             )
-            raise ConversionError(msg) from e
+            raise ConversionError(msg)
 
         # Find the main model file
         model_file = self._find_model_file(metadata)
