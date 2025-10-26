@@ -349,7 +349,7 @@ class TestModelManagerInterface:
             assert data["registry"] == "test"
             assert data["model_id"] == "microsoft/DialoGPT-medium"
             assert data["format"] == "onnx"
-            assert data["files"]["model.onnx"] == "/tmp/model.onnx"  # noqa: S108
+            assert data["files"]["model.onnx"] == Path("/tmp/model.onnx").as_posix()  # noqa: S108
 
 
 class TestExceptions:

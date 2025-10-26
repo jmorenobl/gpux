@@ -297,7 +297,10 @@ class ModelManager(ABC):
             "model_id": metadata.model_id,
             "revision": metadata.revision,
             "format": metadata.format,
-            "files": {name: str(path) for name, path in metadata.files.items()},
+            "files": {
+                name: path.as_posix() if isinstance(path, Path) else str(path)
+                for name, path in metadata.files.items()
+            },
             "size_bytes": metadata.size_bytes,
             "description": metadata.description,
             "tags": metadata.tags,
