@@ -41,6 +41,12 @@ class TensorFlowConverter(ONNXConverter):
                 "Install with: pip install gpux[tensorflow]"
             )
             raise ImportError(msg)
+        if tf2onnx is None:
+            msg = (
+                "tf2onnx is not installed. "
+                "Install with: pip install gpux[tensorflow]"
+            )
+            raise ImportError(msg)
         super().__init__(cache_dir)
         self.optimizer = ModelOptimizer()
 

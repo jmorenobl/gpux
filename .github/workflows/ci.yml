@@ -53,6 +53,25 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         echo "Testing TensorFlow converter on ${{ matrix.os }}..."
+        echo "Checking if TensorFlow is installed..."
+        uv run python -c "
+        try:
+            import tensorflow as tf
+            print(f'TensorFlow version: {tf.__version__}')
+        except ImportError as e:
+            print(f'TensorFlow import failed: {e}')
+            exit(1)
+        "
+        echo "Checking if tf2onnx is installed..."
+        uv run python -c "
+        try:
+            import tf2onnx
+            print(f'tf2onnx version: {tf2onnx.__version__}')
+        except ImportError as e:
+            print(f'tf2onnx import failed: {e}')
+            exit(1)
+        "
+        echo "Testing TensorFlow converter..."
         uv run python -c "
         from gpux.core.conversion.tensorflow import TensorFlowConverter
         converter = TensorFlowConverter()
