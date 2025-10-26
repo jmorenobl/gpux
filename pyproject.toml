@@ -166,6 +166,15 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["S101", "PLR2004", "SLF001"]
+"scripts/**/*.py" = [
+    "T201",  # print found (CLI scripts need prints)
+    "S603",  # subprocess call: check for execution of untrusted input
+    "S607",  # Starting a process with a partial executable path
+    "TRY300",  # Consider moving this statement to an `else` block
+    "E501",  # Line too long (for CLI output formatting)
+    "G004",  # Logging statement uses f-string
+    "PTH123",  # `open()` should be replaced by `Path.open()`
+]
 
 [tool.mypy]
 python_version = "3.11"
@@ -249,4 +258,9 @@ exclude_dirs = [
     "htmlcov",
     "site",
 ]
-skips = ["B101"]  # Skip assert_used test
+skips = ["B101", "B603"]  # Skip assert_used test and subprocess calls
+exclude_lines = [
+    "scripts/**/*.py:B404",  # subprocess import
+    "scripts/**/*.py:B603",  # subprocess call
+    "scripts/**/*.py:B607",  # partial executable path
+]

@@ -1,12 +1,12 @@
 # `gpux run`
 
-Run inference on models.
+Run inference on models from registries or local projects.
 
 ---
 
 ## Overview
 
-The `gpux run` command loads a model and runs inference on provided input data. It supports both single inference and benchmarking modes.
+The `gpux run` command loads a model and runs inference on provided input data. It supports both registry models (pulled from Hugging Face) and local models with `gpux.yml` configuration.
 
 ```bash
 gpux run MODEL_NAME [OPTIONS]
@@ -18,22 +18,30 @@ gpux run MODEL_NAME [OPTIONS]
 
 ### `MODEL_NAME` *(required)*
 
-Name of the model to run.
+Name of the model to run. Can be:
 
-- **Type**: `string`
-- **Required**: Yes
+- **Registry model**: `distilbert-base-uncased-finetuned-sst-2-english`
+- **Local model**: `sentiment-analysis` (requires `gpux.yml`)
+- **Model path**: `./models/bert` or `/path/to/model`
 
 **Examples**:
 ```bash
+# Registry models
+gpux run distilbert-base-uncased-finetuned-sst-2-english
+gpux run facebook/opt-125m
+gpux run sentence-transformers/all-MiniLM-L6-v2
+
+# Local models
 gpux run sentiment-analysis
 gpux run image-classifier
 gpux run ./models/bert
 ```
 
 The command searches for models in:
-1. Current directory (if `gpux.yml` exists)
-2. Directory specified by model name
-3. `.gpux/` directory (for built models)
+1. Registry cache (`~/.gpux/models/`)
+2. Current directory (if `gpux.yml` exists)
+3. Directory specified by model name
+4. `.gpux/` directory (for built models)
 
 ---
 
@@ -153,18 +161,40 @@ gpux run sentiment --input '{"text": "Test"}' --verbose
 
 ## Input Formats
 
-### JSON String
+### Registry Models
 
-Pass input data directly as a JSON string:
+Registry models typically use standardized input formats:
 
+#### Text Classification
+```bash
+gpux run distilbert-base-uncased-finetuned-sst-2-english --input '{"inputs": "I love GPUX!"}'
+```
+
+#### Text Generation
+```bash
+gpux run facebook/opt-125m --input '{"inputs": "The future of AI is"}'
+```
+
+#### Embeddings
+```bash
+gpux run sentence-transformers/all-MiniLM-L6-v2 --input '{"inputs": "Hello world"}'
+```
+
+#### Question Answering
+```bash
+gpux run distilbert-base-cased-distilled-squad --input '{"question": "What is AI?", "context": "AI is artificial intelligence"}'
+```
+
+### Local Models
+
+Local models use custom input formats defined in `gpux.yml`:
+
+#### JSON String
 ```bash
 gpux run sentiment --input '{"text": "I love GPUX!"}'
 ```
 
-### JSON File
-
-Load input from a JSON file:
-
+#### JSON File
 ```bash
 gpux run sentiment --file input.json
 ```
@@ -176,10 +206,7 @@ gpux run sentiment --file input.json
 }
 ```
 
-### File Path with @ Prefix
-
-Alternative file loading syntax:
-
+#### File Path with @ Prefix
 ```bash
 gpux run sentiment --input @input.json
 ```
@@ -317,8 +344,39 @@ gpux run sentiment \
 
 ## Examples
 
-### Sentiment Analysis
+### Registry Models
 
+#### Sentiment Analysis
+```bash
+gpux run distilbert-base-uncased-finetuned-sst-2-english --input '{"inputs": "I love GPUX!"}'
+```
+
+**Output**:
+```json
+{
+  "logits": [[-3.2, 3.8]],
+  "predicted_class": "POSITIVE"
+}
+```
+
+#### Text Generation
+```bash
+gpux run facebook/opt-125m --input '{"inputs": "The future of AI is"}'
+```
+
+#### Embeddings
+```bash
+gpux run sentence-transformers/all-MiniLM-L6-v2 --input '{"inputs": "Hello world"}'
+```
+
+#### Question Answering
+```bash
+gpux run distilbert-base-cased-distilled-squad --input '{"question": "What is AI?", "context": "AI is artificial intelligence"}'
+```
+
+### Local Models
+
+#### Sentiment Analysis
 ```bash
 gpux run sentiment-analysis --input '{"text": "I love GPUX!"}'
 ```
@@ -331,33 +389,32 @@ gpux run sentiment-analysis --input '{"text": "I love GPUX!"}'
 }
 ```
 
-### Image Classification
-
+#### Image Classification
 ```bash
 gpux run image-classifier --input '{
   "image": [/* pixel values */]
 }'
 ```
 
-### From File
+### File Input
 
 ```bash
-gpux run sentiment --file input.json --output result.json
+gpux run distilbert-base-uncased-finetuned-sst-2-english --file input.json --output result.json
 ```
 
 ### With Specific Provider
 
 ```bash
-gpux run sentiment \
-  --input '{"text": "Test"}' \
+gpux run distilbert-base-uncased-finetuned-sst-2-english \
+  --input '{"inputs": "Test"}' \
   --provider cuda
 ```
 
 ### Benchmark on Apple Silicon
 
 ```bash
-gpux run sentiment \
-  --input '{"text": "Performance test"}' \
+gpux run distilbert-base-uncased-finetuned-sst-2-english \
+  --input '{"inputs": "Performance test"}' \
   --provider coreml \
   --benchmark \
   --runs 1000
@@ -369,6 +426,17 @@ gpux run sentiment \
 
 ### Model Not Found
 
+#### Registry Model
+```bash
+Error: Model 'invalid-model-name' not found in registry
+```
+
+**Solution**:
+- Check model name spelling
+- Verify model exists on Hugging Face Hub
+- Try pulling the model first: `gpux pull model-name`
+
+#### Local Model
 ```bash
 Error: Model 'sentiment-analysis' not found
 ```
@@ -401,10 +469,21 @@ gpux run sentiment --input '{"text": "test"}'
 ### Missing Input Fields
 
 ```bash
-Run failed: Missing required input: 'text'
+Run failed: Missing required input: 'inputs'
 ```
 
-**Solution**: Provide all required inputs as specified in `gpux.yml`.
+**Solution**: Provide all required inputs as specified in model configuration.
+
+### Registry Model Not Cached
+
+```bash
+Error: Model 'distilbert-base-uncased-finetuned-sst-2-english' not found in cache
+```
+
+**Solution**: Pull the model first:
+```bash
+gpux pull distilbert-base-uncased-finetuned-sst-2-english
+```
 
 ---
 
@@ -460,7 +539,8 @@ Run failed: Missing required input: 'text'
 
 ## Related Commands
 
-- [`gpux build`](build.md) - Build and validate models
+- [`gpux pull`](pull.md) - Pull models from registries
+- [`gpux build`](build.md) - Build and validate local models
 - [`gpux serve`](serve.md) - Start HTTP server for inference
 - [`gpux inspect`](inspect.md) - Inspect model details
 
@@ -469,6 +549,8 @@ Run failed: Missing required input: 'text'
 ## See Also
 
 - [Running Inference Tutorial](../../tutorial/running-inference.md)
+- [Pulling Models Tutorial](../../tutorial/pulling-models.md)
+- [Working with Registries](../../guide/registries.md)
 - [Benchmarking Guide](../../tutorial/benchmarking.md)
 - [Batch Inference](../../guide/batch-inference.md)
 - [Performance Optimization](../../advanced/optimization.md)

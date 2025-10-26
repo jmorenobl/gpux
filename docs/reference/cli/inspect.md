@@ -1,12 +1,12 @@
 # `gpux inspect`
 
-Inspect models and runtime information.
+Inspect models from registries or local projects and runtime information.
 
 ---
 
 ## Overview
 
-The `gpux inspect` command provides detailed information about models, their inputs/outputs, metadata, and available execution providers. It's essential for understanding model specifications and debugging.
+The `gpux inspect` command provides detailed information about models, their inputs/outputs, metadata, and available execution providers. It supports both registry models (pulled from Hugging Face) and local models with `gpux.yml` configuration.
 
 ```bash
 gpux inspect [MODEL_NAME] [OPTIONS]
@@ -18,10 +18,11 @@ gpux inspect [MODEL_NAME] [OPTIONS]
 
 ### `MODEL_NAME`
 
-Name of the model to inspect (optional).
+Name of the model to inspect (optional). Can be:
 
-- **Type**: `string`
-- **Required**: No
+- **Registry model**: `distilbert-base-uncased-finetuned-sst-2-english`
+- **Local model**: `sentiment-analysis` (requires `gpux.yml`)
+- **Model path**: `./models/bert` or `/path/to/model`
 
 **Behavior**:
 - If provided: Inspects the specified model
@@ -29,8 +30,17 @@ Name of the model to inspect (optional).
 
 **Examples**:
 ```bash
-gpux inspect sentiment-analysis    # Inspect specific model
-gpux inspect                       # Show runtime info
+# Registry models
+gpux inspect distilbert-base-uncased-finetuned-sst-2-english
+gpux inspect facebook/opt-125m
+gpux inspect sentence-transformers/all-MiniLM-L6-v2
+
+# Local models
+gpux inspect sentiment-analysis
+gpux inspect ./models/bert
+
+# Runtime information
+gpux inspect
 ```
 
 ---

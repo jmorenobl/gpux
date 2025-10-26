@@ -1,12 +1,12 @@
 # `gpux serve`
 
-Start HTTP server for model serving.
+Start HTTP server for model serving from registries or local projects.
 
 ---
 
 ## Overview
 
-The `gpux serve` command starts a FastAPI server that provides REST API endpoints for model inference. Perfect for production deployments and API-based inference.
+The `gpux serve` command starts a FastAPI server that provides REST API endpoints for model inference. It supports both registry models (pulled from Hugging Face) and local models with `gpux.yml` configuration.
 
 ```bash
 gpux serve MODEL_NAME [OPTIONS]
@@ -18,13 +18,20 @@ gpux serve MODEL_NAME [OPTIONS]
 
 ### `MODEL_NAME` *(required)*
 
-Name of the model to serve.
+Name of the model to serve. Can be:
 
-- **Type**: `string`
-- **Required**: Yes
+- **Registry model**: `distilbert-base-uncased-finetuned-sst-2-english`
+- **Local model**: `sentiment-analysis` (requires `gpux.yml`)
+- **Model path**: `./models/bert` or `/path/to/model`
 
 **Examples**:
 ```bash
+# Registry models
+gpux serve distilbert-base-uncased-finetuned-sst-2-english
+gpux serve facebook/opt-125m
+gpux serve sentence-transformers/all-MiniLM-L6-v2
+
+# Local models
 gpux serve sentiment-analysis
 gpux serve image-classifier
 gpux serve ./models/bert

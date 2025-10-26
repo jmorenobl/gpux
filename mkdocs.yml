@@ -177,6 +177,7 @@ nav:
     - tutorial/index.md
     - Installation: tutorial/installation.md
     - First Steps: tutorial/first-steps.md
+    - Pulling Models: tutorial/pulling-models.md
     - Configuration: tutorial/configuration.md
     - Running Inference: tutorial/running-inference.md
     - Benchmarking: tutorial/benchmarking.md
@@ -185,6 +186,7 @@ nav:
   - User Guide:
     - guide/index.md
     - Working with Models: guide/models.md
+    - Working with Registries: guide/registries.md
     - GPU Providers: guide/providers.md
     - Inputs & Outputs: guide/inputs-outputs.md
     - Data Preprocessing: guide/preprocessing.md
@@ -194,6 +196,7 @@ nav:
 
   - Examples:
     - examples/index.md
+    - Hugging Face Models: examples/huggingface-models.md
     - Sentiment Analysis: examples/sentiment-analysis.md
     - Image Classification: examples/image-classification.md
     - Object Detection: examples/object-detection.md
@@ -236,6 +239,7 @@ nav:
     - reference/index.md
     - CLI Commands:
       - reference/cli/build.md
+      - reference/cli/pull.md
       - reference/cli/run.md
       - reference/cli/serve.md
       - reference/cli/inspect.md

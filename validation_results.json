@@ -1,0 +1,37 @@
+{
+  "timestamp": 1761440756.702843,
+  "models_tested": 4,
+  "successful_tests": 1,
+  "success_rate": 25.0,
+  "average_time": 20.24029016494751,
+  "results": [
+    {
+      "name": "distilbert-base-uncased-finetuned-sst-2-english",
+      "success": true,
+      "pull_time": 12.44893503189087,
+      "total_time": 20.24029016494751,
+      "status": "Success"
+    },
+    {
+      "name": "sentence-transformers/all-MiniLM-L6-v2",
+      "success": false,
+      "pull_time": 9.147608995437622,
+      "total_time": 7.481051921844482,
+      "status": "Inspect failed"
+    },
+    {
+      "name": "facebook/opt-125m",
+      "success": false,
+      "pull_time": 9.913742780685425,
+      "total_time": 7.414881944656372,
+      "status": "Inspect failed"
+    },
+    {
+      "name": "microsoft/DialoGPT-medium",
+      "success": false,
+      "pull_time": 28.792613983154297,
+      "total_time": 8.12891697883606,
+      "status": "Inspect failed"
+    }
+  ]
+}

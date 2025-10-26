@@ -1,16 +1,62 @@
 # Working with Models
 
-Deep dive into ONNX models, conversion, optimization, and inspection.
+Deep dive into ONNX models, conversion, optimization, and registry integration.
 
 ---
 
 ## 🎯 What You'll Learn
 
 - ✅ Understanding ONNX format
+- ✅ Pulling models from registries (Hugging Face)
 - ✅ Converting models from PyTorch, TensorFlow, etc.
 - ✅ Model optimization techniques
 - ✅ Inspecting and debugging models
 - ✅ Model versioning and management
+
+---
+
+## 📦 Registry Models
+
+### Pulling from Hugging Face
+
+The easiest way to get started is to pull pre-trained models:
+
+```bash
+# Pull a sentiment analysis model
+gpux pull distilbert-base-uncased-finetuned-sst-2-english
+
+# Pull a text generation model
+gpux pull facebook/opt-125m
+
+# Pull an embedding model
+gpux pull sentence-transformers/all-MiniLM-L6-v2
+```
+
+### Registry Model Structure
+
+When you pull a model, GPUX creates a local cache:
+
+```
+~/.gpux/models/distilbert-base-uncased-finetuned-sst-2-english/
+├── model.onnx          # Converted ONNX model
+├── gpux.yml           # Auto-generated configuration
+├── tokenizer.json     # Tokenizer (if applicable)
+├── config.json        # Model configuration
+└── metadata.json       # GPUX metadata
+```
+
+### Using Registry Models
+
+```bash
+# Run inference
+gpux run distilbert-base-uncased-finetuned-sst-2-english --input '{"inputs": "I love this!"}'
+
+# Inspect model
+gpux inspect distilbert-base-uncased-finetuned-sst-2-english
+
+# Serve model
+gpux serve distilbert-base-uncased-finetuned-sst-2-english --port 8080
+```
 
 ---
 

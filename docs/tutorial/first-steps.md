@@ -1,6 +1,6 @@
 # First Steps
 
-Create your first GPUX project and run inference in under 10 minutes!
+Get started with GPUX in under 5 minutes! Choose between pulling a model from Hugging Face or creating your own.
 
 ---
 
@@ -8,26 +8,75 @@ Create your first GPUX project and run inference in under 10 minutes!
 
 By the end of this guide, you'll have:
 
-- ✅ A working GPUX project
-- ✅ A simple ONNX model
-- ✅ A `gpux.yml` configuration file
-- ✅ Successfully run inference
+- ✅ Pulled a model from Hugging Face registry
+- ✅ Run inference on a real model
+- ✅ Served your model via HTTP API
+- ✅ (Optional) Created your own ONNX model
 
 ---
 
-## 📁 Project Setup
+## 🚀 Quick Start: Pull from Hugging Face
 
-### Create Project Directory
+The fastest way to get started is to pull a pre-trained model from Hugging Face:
 
 ```bash
-# Create and navigate to project directory
-mkdir my-first-model
-cd my-first-model
+# Pull a sentiment analysis model
+gpux pull distilbert-base-uncased-finetuned-sst-2-english
 ```
+
+Expected output:
+```
+╭─ Pulling Model ────────────────────────────────────────────────╮
+│ Registry: huggingface                                           │
+│ Model: distilbert-base-uncased-finetuned-sst-2-english         │
+│ Size: 268 MB                                                     │
+╰─────────────────────────────────────────────────────────────────╯
+
+📥 Downloading model files...
+✅ Model downloaded successfully!
+
+🔄 Converting to ONNX...
+✅ Conversion completed!
+
+📝 Generating configuration...
+✅ Configuration saved to: ~/.gpux/models/distilbert-base-uncased-finetuned-sst-2-english/gpux.yml
+```
+
+### Run Inference
+
+```bash
+# Run sentiment analysis
+gpux run distilbert-base-uncased-finetuned-sst-2-english --input '{"inputs": "I love this product!"}'
+```
+
+Expected output:
+```json
+{
+  "logits": [[-3.2, 3.8]],
+  "predicted_class": "POSITIVE"
+}
+```
+
+### Serve Your Model
+
+```bash
+# Start HTTP server
+gpux serve distilbert-base-uncased-finetuned-sst-2-english --port 8080
+```
+
+Test the API:
+```bash
+curl -X POST http://localhost:8080/predict \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": "This is amazing!"}'
+```
+
+!!! success "Congratulations! 🎉"
+    You just pulled, ran, and served a real ML model in under 5 minutes!
 
 ---
 
-## 🧪 Create a Simple ONNX Model
+## 🧪 Alternative: Create Your Own Model
 
 For this tutorial, we'll create a simple linear regression model. Don't worry if you're not familiar with machine learning - this is just for demonstration!
 
@@ -279,7 +328,33 @@ my-first-model/
 
 ## 🎓 Understanding the Workflow
 
-Here's what happens when you run GPUX commands:
+Here's what happens when you use GPUX with registry models:
+
+```mermaid
+graph LR
+    A[gpux pull model-id] --> B[Download Model]
+    B --> C[Convert to ONNX]
+    C --> D[Generate Config]
+    D --> E[Cache Model]
+    E --> F[gpux run model-id]
+    G[input.json] --> F
+    F --> H[Load from Cache]
+    H --> I[Run Inference]
+    I --> J[Return Results]
+
+    E --> K[gpux serve model-id]
+    K --> L[Start HTTP Server]
+    L --> M[Handle API Requests]
+
+    style A fill:#6366f1,stroke:#4f46e5,color:#fff
+    style G fill:#6366f1,stroke:#4f46e5,color:#fff
+    style J fill:#10b981,stroke:#059669,color:#fff
+    style M fill:#10b981,stroke:#059669,color:#fff
+```
+
+### Local Project Workflow
+
+For local projects with `gpux.yml`:
 
 ```mermaid
 graph LR
@@ -305,42 +380,40 @@ graph LR
 
 ## ✨ Try These Next
 
-Now that you have a working GPUX project, try these exercises:
+Now that you have a working GPUX setup, try these exercises:
 
-### 1. Change Input Values
-
-Edit `input.json` and run inference again:
-
-```json
-{
-  "input": [[10, 9, 8, 7, 6, 5, 4, 3, 2, 1]]
-}
-```
+### 1. Try Different Hugging Face Models
 
 ```bash
-gpux run my-first-model --file input.json
+# Text generation model
+gpux pull facebook/opt-125m
+gpux run facebook/opt-125m --input '{"inputs": "The future of AI is"}'
+
+# Embedding model
+gpux pull sentence-transformers/all-MiniLM-L6-v2
+gpux run sentence-transformers/all-MiniLM-L6-v2 --input '{"inputs": "Hello world"}'
 ```
 
-### 2. Save Output to File
-
-Save inference results to a file:
+### 2. Inspect Model Information
 
 ```bash
-gpux run my-first-model --file input.json --output result.json
-cat result.json
+# Get detailed model information
+gpux inspect distilbert-base-uncased-finetuned-sst-2-english
 ```
 
 ### 3. Use Different Providers
 
-Try forcing a specific provider:
-
 ```bash
-# Use CPU provider
-gpux build . --provider cpu
+# Force CPU provider
+gpux run distilbert-base-uncased-finetuned-sst-2-english --input '{"inputs": "test"}' --provider cpu
 
-# Verify the change
-gpux inspect my-first-model
+# Force specific GPU provider
+gpux run distilbert-base-uncased-finetuned-sst-2-english --input '{"inputs": "test"}' --provider cuda
 ```
+
+### 4. Create Your Own Model (Advanced)
+
+If you want to create your own ONNX model:
 
 ---
 
