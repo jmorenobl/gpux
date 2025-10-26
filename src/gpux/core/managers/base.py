@@ -52,7 +52,7 @@ class ModelMetadata:
     model_id: str
     revision: str
     format: str
-    files: dict[str, Path]
+    files: dict[str, Path | str]
     size_bytes: int
     description: str | None = None
     tags: list[str] | None = None

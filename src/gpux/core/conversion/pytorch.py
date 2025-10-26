@@ -134,12 +134,20 @@ class PyTorchConverter(ONNXConverter):
                     msg = "No config.json found in model files"
                     raise ConversionError(msg) from None  # noqa: TRY301
 
+                # Determine task from model name or config
+                task = self._infer_task_from_model(metadata)
+
                 main_export(
-                    model_name_or_path=str(config_path.parent),
+                    model_name_or_path=str(
+                        config_path.parent
+                        if isinstance(config_path, Path)
+                        else Path(config_path).parent
+                    ),
                     output=temp_path,
-                    task="auto",  # Auto-detect task
+                    task=task,  # Use inferred task
                     device="cpu",  # Always use CPU for conversion
                     fp16=False,  # Use FP32 for compatibility
+                    opset=14,  # Use ONNX opset 14 for modern operators
                 )
 
                 # Find the generated ONNX file
@@ -159,6 +167,29 @@ class PyTorchConverter(ONNXConverter):
         except Exception as e:
             msg = f"Optimum conversion failed: {e}"
             raise ConversionError(msg) from e
+
+    def _infer_task_from_model(self, metadata: ModelMetadata) -> str:
+        """Infer the task from model metadata.
+
+        Args:
+            metadata: Model metadata
+
+        Returns:
+            Task name for optimum export
+        """
+        model_id = metadata.model_id.lower()
+
+        # Common task mappings
+        if "distilbert" in model_id or "bert" in model_id:
+            return "fill-mask"
+        if "gpt" in model_id or "dialo" in model_id:
+            return "text-generation"
+        if "roberta" in model_id:
+            return "fill-mask"
+        if "t5" in model_id or "bart" in model_id:
+            return "text2text-generation"
+        # Default to fill-mask for most transformer models
+        return "fill-mask"
 
     def _convert_with_torch(
         self,
@@ -183,7 +214,11 @@ class PyTorchConverter(ONNXConverter):
                 msg = "No config.json found in model files"
                 raise ConversionError(msg) from None  # noqa: TRY301
 
-            model_path = model_path.parent
+            model_path = (
+                model_path.parent
+                if isinstance(model_path, Path)
+                else Path(model_path).parent
+            )
             if not model_path.exists():
                 msg = f"Model path not found: {model_path}"
                 raise ConversionError(msg) from None  # noqa: TRY301
@@ -218,7 +253,7 @@ class PyTorchConverter(ONNXConverter):
                 dummy_inputs,
                 str(output_path),
                 export_params=True,
-                opset_version=11,  # Use ONNX opset 11 for compatibility
+                opset_version=14,  # Use ONNX opset 14 for modern operators
                 do_constant_folding=True,
                 input_names=list(input_shapes.keys()),
                 output_names=self._get_output_names(metadata),
@@ -242,11 +277,20 @@ class PyTorchConverter(ONNXConverter):
         """
         try:
             config_path = metadata.files.get("config.json")
-            if not config_path or not config_path.exists():
+            if not config_path or not (
+                config_path.exists()
+                if isinstance(config_path, Path)
+                else Path(config_path).exists()
+            ):
                 return {}
 
             config = AutoConfig.from_pretrained(
-                str(config_path.parent), local_files_only=True
+                str(
+                    config_path.parent
+                    if isinstance(config_path, Path)
+                    else Path(config_path).parent
+                ),
+                local_files_only=True,
             )  # nosec B615
             return self._extract_input_shapes_from_config(config)
 

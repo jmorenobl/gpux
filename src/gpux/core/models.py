@@ -22,7 +22,7 @@ class InputSpec:
 
     name: str
     type: str
-    shape: list[int]
+    shape: list[int | str | None]
     required: bool = True
     description: str | None = None
 

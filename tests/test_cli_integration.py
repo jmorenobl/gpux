@@ -342,7 +342,10 @@ def test_cli_inspect_model_by_name_model_file_missing(tmp_path: Path) -> None:
     )
     with (
         patch("gpux.cli.inspect.GPUXConfigParser") as mock_parser_cls,
-        patch("gpux.cli.inspect._find_model_config", return_value=project_dir),
+        patch(
+            "gpux.cli.inspect.ModelDiscovery.find_model_config",
+            return_value=project_dir,
+        ),
     ):
         mock_parser = mock_parser_cls.return_value
         mock_parser.parse_file.return_value = MagicMock()

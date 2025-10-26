@@ -364,7 +364,7 @@ class TestExceptions:
     def test_model_not_found_error(self):
         """Test ModelNotFoundError exception."""
         error = ModelNotFoundError("Model not found")
-        assert str(error) == "Model not found"
+        assert str(error) == "Model 'Model not found' not found"
         assert isinstance(error, RegistryError)
 
     def test_conversion_error(self):

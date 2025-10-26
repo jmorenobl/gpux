@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -13,6 +12,8 @@ from rich.json import JSON
 from rich.table import Table
 
 from gpux.config.parser import GPUXConfigParser
+from gpux.core.discovery import ModelDiscovery
+from gpux.core.managers.exceptions import ModelNotFoundError
 from gpux.core.models import ModelInspector
 from gpux.core.providers import ProviderManager
 
@@ -68,12 +69,15 @@ def inspect_command(
             # Inspect model file directly
             _inspect_model_file(Path(model_file), json_output=json_output)
         elif model_name:
-            # Inspect model by name
+            # Inspect model by name using unified discovery
             _inspect_model_by_name(model_name, config_file, json_output=json_output)
         else:
             # Show runtime information
             _inspect_runtime(json_output=json_output)
 
+    except ModelNotFoundError as e:
+        console.print(f"[red]{e.format_error_message()}[/red]")
+        raise typer.Exit(1) from e
     except (FileNotFoundError, ValueError, RuntimeError) as e:
         console.print(f"[red]Inspect failed: {e}[/red]")
         if verbose:
@@ -105,18 +109,15 @@ def _inspect_model_file(model_path: Path, *, json_output: bool) -> None:
 def _inspect_model_by_name(
     model_name: str, config_file: str, *, json_output: bool
 ) -> None:
-    """Inspect a model by name.
+    """Inspect a model by name using unified discovery.
 
     Args:
         model_name: Name of the model
         config_file: Configuration file name
         json_output: Whether to output in JSON format
     """
-    # Find model configuration
-    model_path = _find_model_config(model_name, config_file)
-    if not model_path:
-        console.print(f"[red]Error: Model '{model_name}' not found[/red]")
-        raise typer.Exit(1) from None
+    # Find model configuration using unified discovery
+    model_path = ModelDiscovery.find_model_config(model_name, config_file)
 
     # Parse configuration
     parser = GPUXConfigParser()
@@ -167,42 +168,6 @@ def _inspect_runtime(*, json_output: bool) -> None:
         _display_runtime_info(provider_manager)
 
 
-def _find_model_config(model_name: str, config_file: str) -> Path | None:
-    """Find model configuration file.
-
-    Args:
-        model_name: Name of the model
-        config_file: Configuration file name
-
-    Returns:
-        Path to model directory or None if not found
-    """
-    # Check current directory
-    current_dir = Path()
-    if (current_dir / config_file).exists():
-        return current_dir
-
-    # Check if model_name is a directory
-    model_dir = Path(model_name)
-    if model_dir.is_dir() and (model_dir / config_file).exists():
-        return model_dir
-
-    # Check .gpux directory for built models
-    gpux_dir = Path(".gpux")
-    if gpux_dir.exists():
-        # Look for model info files
-        for info_file in gpux_dir.glob("**/model_info.json"):
-            try:
-                with info_file.open() as f:
-                    info = json.load(f)
-                if info.get("name") == model_name:
-                    return info_file.parent.parent
-            except (json.JSONDecodeError, OSError):
-                continue
-
-    return None
-
-
 def _display_config_info(config: Any) -> None:
     """Display configuration information."""
 
@@ -241,7 +206,7 @@ def _display_model_info(model_info: Any) -> None:
     model_table.add_row("Name", model_info.name)
     model_table.add_row("Version", model_info.version)
     model_table.add_row("Format", model_info.format)
-    model_table.add_row("Size", f"{model_info.size_mb:.1f} MB")
+    model_table.add_row("Size", f"{model_info.size_bytes / (1024 * 1024):.1f} MB")
     model_table.add_row("Path", str(model_info.path))
 
     console.print(model_table)

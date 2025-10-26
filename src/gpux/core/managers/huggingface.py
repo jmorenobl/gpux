@@ -183,7 +183,7 @@ class HuggingFaceManager(ModelManager):
                 model_id=model_id,
                 registry=self.config.name,
                 format=self._detect_model_format(cache_path),
-                files=files,
+                files={str(k): v for k, v in files.items()},
                 size_bytes=total_size,
                 tags=[],
                 metadata={},
@@ -356,7 +356,7 @@ class HuggingFaceManager(ModelManager):
             model_id=model_id,
             revision=revision,
             format=model_format,
-            files=files,
+            files={str(k): v for k, v in files.items()},
             size_bytes=total_size,
             description=description,
             tags=tags,
@@ -364,7 +364,9 @@ class HuggingFaceManager(ModelManager):
                 "pipeline_tag": getattr(model_info, "pipeline_tag", None),
                 "library_name": getattr(model_info, "library_name", None),
                 "downloads": getattr(model_info, "downloads", 0),
-                "last_modified": getattr(model_info, "last_modified", None),
+                "last_modified": str(getattr(model_info, "last_modified", None))
+                if getattr(model_info, "last_modified", None)
+                else None,
             },
         )
 
@@ -406,7 +408,7 @@ class HuggingFaceManager(ModelManager):
             model_id=model_id,
             revision=revision,
             format=model_format,
-            files=files,
+            files={str(k): v for k, v in files.items()},
             size_bytes=0,  # Size unknown without downloading
             description=description,
             tags=tags,
@@ -414,7 +416,9 @@ class HuggingFaceManager(ModelManager):
                 "pipeline_tag": getattr(model_info, "pipeline_tag", None),
                 "library_name": getattr(model_info, "library_name", None),
                 "downloads": getattr(model_info, "downloads", 0),
-                "last_modified": getattr(model_info, "last_modified", None),
+                "last_modified": str(getattr(model_info, "last_modified", None))
+                if getattr(model_info, "last_modified", None)
+                else None,
             },
         )
 

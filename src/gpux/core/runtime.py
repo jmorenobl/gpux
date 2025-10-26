@@ -339,11 +339,15 @@ class GPUXRuntime:
                     expected_shape = input_spec.shape
                     actual_shape = list(data.shape)
 
-                    # Handle dynamic dimensions (represented as -1 or 0)
+                    # Handle dynamic dimensions (represented as -1, 0, or string names)
                     for i, (exp, act) in enumerate(
                         zip(expected_shape, actual_shape, strict=True)
                     ):
-                        if exp > 0 and exp != act:
+                        # Skip validation for dynamic dimensions
+                        if isinstance(exp, str) or (isinstance(exp, int) and exp <= 0):
+                            continue
+
+                        if exp != act:
                             logger.error(
                                 "Shape mismatch for %s at dim %d: expected %d, got %d",
                                 input_spec.name,

@@ -12,6 +12,7 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+from gpux.core.conversion import ConfigGenerator, PyTorchConverter, TensorFlowConverter
 from gpux.core.managers import (
     HuggingFaceManager,
     ModelManager,
@@ -141,11 +142,103 @@ def _pull_model_with_progress(
                 force_download=force,
             )
             progress.update(task, description=f"Successfully pulled {model_id}")
+
+            # Auto-convert to ONNX if needed
+            if metadata.format in ("pytorch", "tensorflow"):
+                progress.update(task, description=f"Converting {model_id} to ONNX...")
+                try:
+                    onnx_path = _convert_model_to_onnx(metadata, cache_path)
+                    progress.update(
+                        task, description=f"Generating config for {model_id}"
+                    )
+                    _generate_config_file(metadata, onnx_path, cache_path)
+                    progress.update(
+                        task,
+                        description=f"Successfully converted and configured {model_id}",
+                    )
+                except Exception as conv_error:
+                    if verbose:
+                        console.print(
+                            f"[yellow]Warning:[/yellow] Conversion failed: {conv_error}"
+                        )
+                        import traceback
+
+                        traceback.print_exc()
+                    else:
+                        console.print(
+                            "[yellow]Warning:[/yellow] Model conversion failed, "
+                            "but model is available for manual conversion"
+                        )
+
         except Exception as e:
             progress.stop()
             _handle_pull_error(e, model_id, verbose=verbose)
 
     return metadata
+
+
+def _convert_model_to_onnx(metadata: ModelMetadata, cache_path: Path | None) -> Path:
+    """Convert model to ONNX format.
+
+    Args:
+        metadata: Model metadata
+        cache_path: Cache directory
+
+    Returns:
+        Path to converted ONNX model
+    """
+    converter: PyTorchConverter | TensorFlowConverter
+    if metadata.format == "pytorch":
+        converter = PyTorchConverter(cache_dir=cache_path)
+    elif metadata.format == "tensorflow":
+        converter = TensorFlowConverter(cache_dir=cache_path)
+    else:
+        msg = f"Unsupported format: {metadata.format}"
+        raise ValueError(msg)
+
+    if not converter.can_convert(metadata):
+        msg = f"Cannot convert {metadata.format} model"
+        raise ValueError(msg)
+
+    return converter.convert(metadata)
+
+
+def _generate_config_file(
+    metadata: ModelMetadata, onnx_path: Path, cache_path: Path | None
+) -> None:
+    """Generate gpux.yml configuration file.
+
+    Args:
+        metadata: Model metadata
+        onnx_path: Path to ONNX model
+        cache_path: Cache directory
+    """
+    config_generator = ConfigGenerator()
+
+    # Generate config in the model's directory
+    if cache_path is None:
+        cache_path = Path.home() / ".gpux" / "models"
+
+    model_dir = (
+        cache_path / "huggingface" / metadata.model_id.replace("/", "--") / "main"
+    )
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    config_path = model_dir / "gpux.yml"
+    config_generator.generate_config(metadata, onnx_path, config_path)
+
+    # Update the config file to use absolute path for the ONNX model
+    import yaml
+
+    with config_path.open() as f:
+        config_data = yaml.safe_load(f)
+
+    config_data["model"]["source"] = str(onnx_path)
+
+    with config_path.open("w") as f:
+        yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+
+    logger.info("Generated configuration file: %s", config_path)
 
 
 def _handle_pull_error(error: Exception, model_id: str, *, verbose: bool) -> None:

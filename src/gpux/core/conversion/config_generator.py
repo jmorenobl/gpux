@@ -175,7 +175,17 @@ class ConfigGenerator:
                 input_shape = list(input_info.shape) if input_info.shape else [1]
 
                 # Handle dynamic dimensions
-                input_shape = [dim if dim > 0 else 1 for dim in input_shape]
+                processed_shape = []
+                for dim in input_shape:
+                    if isinstance(dim, str):
+                        # Dynamic dimension, use 1 as default
+                        processed_shape.append(1)
+                    elif isinstance(dim, int) and dim > 0:
+                        processed_shape.append(dim)
+                    else:
+                        # Negative or zero dimension, use 1
+                        processed_shape.append(1)
+                input_shape = processed_shape
 
                 inputs[input_name] = {
                     "type": input_type,
@@ -218,7 +228,17 @@ class ConfigGenerator:
                 output_shape = list(output_info.shape) if output_info.shape else [1]
 
                 # Handle dynamic dimensions
-                output_shape = [dim if dim > 0 else 1 for dim in output_shape]
+                processed_shape = []
+                for dim in output_shape:
+                    if isinstance(dim, str):
+                        # Dynamic dimension, use 1 as default
+                        processed_shape.append(1)
+                    elif isinstance(dim, int) and dim > 0:
+                        processed_shape.append(dim)
+                    else:
+                        # Negative or zero dimension, use 1
+                        processed_shape.append(1)
+                output_shape = processed_shape
 
                 outputs[output_name] = {
                     "type": output_type,

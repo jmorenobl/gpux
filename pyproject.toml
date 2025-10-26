@@ -43,6 +43,7 @@ dev = [
     "mypy>=1.18.2",
     "pre-commit>=4.0.0",
     "bandit[toml]>=1.8.6",
+    "types-tensorflow>=2.18.0.20251008",
 ]
 docs = [
     "mkdocs-material>=9.6.21",
@@ -58,6 +59,8 @@ ml = [
     "opencv-python>=4.8.0",
     "scikit-learn>=1.3.0",
     "optimum[onnxruntime]>=1.14.0",
+    "tensorflow>=2.13.0",
+    "tf2onnx>=1.15.0",
 ]
 serve = [
     "fastapi>=0.100.0",
@@ -191,6 +194,7 @@ module = [
     "rich.*",
     "pydantic.*",
     "pytest.*",
+    "tf2onnx.*",
 ]
 ignore_missing_imports = true
 

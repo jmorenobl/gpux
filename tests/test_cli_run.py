@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 
 from gpux.cli.main import app
+from gpux.core.managers.exceptions import ModelNotFoundError
 from gpux.cli.run import (
-    _find_model_config,
     _load_input_data,
     _run_benchmark,
     _run_inference,
@@ -38,114 +38,8 @@ class TestRunCLI:
         assert "--output" in result.output
         assert "--benchmark" in result.output
 
-    def test_find_model_config_current_directory(
-        self, temp_dir: Path, sample_gpuxfile: Path
-    ) -> None:
-        """Test finding model config in current directory."""
-        config_path = temp_dir / "gpux.yml"
-        config_path.write_text(sample_gpuxfile.read_text())
-
-        with patch("gpux.cli.run.Path") as mock_path:
-            mock_path_instance = MagicMock()
-            mock_path_instance.exists.return_value = True
-            mock_path.return_value = mock_path_instance
-            result = _find_model_config("test-model", "gpux.yml")
-            assert result == mock_path_instance
-
-    def test_find_model_config_model_directory(
-        self, temp_dir: Path, sample_gpuxfile: Path
-    ) -> None:
-        """Test finding model config in model directory."""
-        model_dir = temp_dir / "test-model"
-        model_dir.mkdir()
-        config_path = model_dir / "gpux.yml"
-        config_path.write_text(sample_gpuxfile.read_text())
-
-        with patch("gpux.cli.run.Path") as mock_path:
-            # Mock Path() to return temp_dir for current directory check
-            mock_current_dir = MagicMock()
-            mock_current_dir.exists.return_value = False
-            mock_path.return_value = mock_current_dir
-
-            # Mock Path(model_name) to return model_dir
-            def path_side_effect(*args):
-                if args and args[0] == "test-model":
-                    mock_model_dir = MagicMock()
-                    mock_model_dir.is_dir.return_value = True
-                    mock_model_dir.__truediv__ = lambda _, other: model_dir / other
-                    return mock_model_dir
-                return mock_current_dir
-
-            mock_path.side_effect = path_side_effect
-
-            result = _find_model_config("test-model", "gpux.yml")
-            assert result is not None
-
-    def test_find_model_config_gpux_directory(self, temp_dir: Path) -> None:
-        """Test finding model config in .gpux directory."""
-        gpux_dir = temp_dir / ".gpux"
-        gpux_dir.mkdir()
-
-        model_info_file = gpux_dir / "model_info.json"
-        model_info = {"name": "test-model", "version": "1.0.0"}
-        model_info_file.write_text(json.dumps(model_info))
-
-        with patch("gpux.cli.run.Path") as mock_path:
-            # Mock current directory check
-            mock_current_dir = MagicMock()
-            mock_current_dir.exists.return_value = False
-            mock_path.return_value = mock_current_dir
-
-            # Mock model directory check
-            def path_side_effect(*args):
-                if args and args[0] == "test-model":
-                    mock_model_dir = MagicMock()
-                    mock_model_dir.is_dir.return_value = False
-                    return mock_model_dir
-                return mock_current_dir
-
-            mock_path.side_effect = path_side_effect
-
-            # Mock .gpux directory
-            mock_gpux_dir = MagicMock()
-            mock_gpux_dir.exists.return_value = True
-            mock_gpux_dir.glob.return_value = [model_info_file]
-
-            with patch("gpux.cli.run.Path", return_value=mock_gpux_dir):
-                result = _find_model_config("test-model", "gpux.yml")
-                assert result is not None
-
-    def test_find_model_config_not_found(self) -> None:
-        """Test finding model config when not found."""
-        # Mock the current directory check to return False
-        with patch("gpux.cli.run.Path") as mock_path:
-
-            def path_side_effect(*args):
-                if not args:  # Path() with no arguments
-                    mock_current_dir = MagicMock()
-                    mock_current_dir.exists.return_value = False
-                    # Mock the __truediv__ method for current_dir / config_file
-                    mock_config_file = MagicMock()
-                    mock_config_file.exists.return_value = False
-                    mock_current_dir.__truediv__ = lambda _, __: mock_config_file
-                    return mock_current_dir
-                if args and args[0] == "definitely-nonexistent-model-12345":
-                    mock_model_dir = MagicMock()
-                    mock_model_dir.is_dir.return_value = False
-                    mock_model_dir.__truediv__ = lambda _, __: MagicMock()
-                    return mock_model_dir
-                if args and args[0] == ".gpux":
-                    mock_gpux_dir = MagicMock()
-                    mock_gpux_dir.exists.return_value = False
-                    return mock_gpux_dir
-                return MagicMock()
-
-            mock_path.side_effect = path_side_effect
-
-            result = _find_model_config(
-                "definitely-nonexistent-model-12345", "gpux.yml"
-            )
-            assert result is None
+    # Note: _find_model_config tests removed as function no longer exists
+    # Model discovery is now tested in test_model_discovery.py
 
     def test_load_input_data_from_file(self, temp_dir: Path) -> None:
         """Test loading input data from file."""
@@ -273,7 +167,7 @@ class TestRunCLI:
                 saved_data = json.load(f)
                 assert saved_data == mock_runtime.benchmark.return_value
 
-    @patch("gpux.cli.run._find_model_config")
+    @patch("gpux.cli.run.ModelDiscovery.find_model_config")
     @patch("gpux.cli.run.GPUXConfigParser")
     @patch("gpux.cli.run.GPUXRuntime")
     def test_run_command_success(
@@ -313,7 +207,10 @@ class TestRunCLI:
 
     def test_run_command_model_not_found(self) -> None:
         """Test run command when model is not found."""
-        with patch("gpux.cli.run._find_model_config", return_value=None):
+        with patch(
+            "gpux.cli.run.ModelDiscovery.find_model_config",
+            side_effect=ModelNotFoundError("nonexistent-model"),
+        ):
             result = self.runner.invoke(app, ["run", "nonexistent-model"])
             assert result.exit_code == 1
             assert "Model 'nonexistent-model' not found" in result.output
@@ -344,7 +241,9 @@ outputs:
         model_file = temp_dir / "model.onnx"
         model_file.touch()
 
-        with patch("gpux.cli.run._find_model_config", return_value=temp_dir):
+        with patch(
+            "gpux.cli.run.ModelDiscovery.find_model_config", return_value=temp_dir
+        ):
             result = self.runner.invoke(app, ["run", "test-model"])
             assert result.exit_code == 1
             assert "No input data provided" in result.output
@@ -352,7 +251,7 @@ outputs:
     def test_run_command_verbose(self) -> None:
         """Test run command with verbose flag."""
         with (
-            patch("gpux.cli.run._find_model_config", return_value=None),
+            patch("gpux.cli.run.ModelDiscovery.find_model_config", return_value=None),
             patch("logging.getLogger") as mock_get_logger,
         ):
             mock_logger = mock_get_logger.return_value
@@ -363,7 +262,9 @@ outputs:
     def test_run_command_benchmark(self, temp_dir: Path) -> None:
         """Test run command with benchmark flag."""
         with (
-            patch("gpux.cli.run._find_model_config", return_value=temp_dir),
+            patch(
+                "gpux.cli.run.ModelDiscovery.find_model_config", return_value=temp_dir
+            ),
             patch("gpux.cli.run.GPUXConfigParser") as mock_parser_class,
         ):
             mock_parser = MagicMock()
@@ -396,7 +297,8 @@ outputs:
     def test_run_command_exception_handling(self) -> None:
         """Test run command exception handling."""
         with patch(
-            "gpux.cli.run._find_model_config", side_effect=ValueError("Test error")
+            "gpux.cli.run.ModelDiscovery.find_model_config",
+            side_effect=ValueError("Test error"),
         ):
             result = self.runner.invoke(app, ["run", "test-model"])
             assert result.exit_code == 1
@@ -406,7 +308,7 @@ outputs:
         """Test run command exception handling with verbose flag."""
         with (
             patch(
-                "gpux.cli.run._find_model_config",
+                "gpux.cli.run.ModelDiscovery.find_model_config",
                 side_effect=RuntimeError("Test error"),
             ),
             patch("gpux.cli.run.console.print_exception") as mock_print_exception,

@@ -15,6 +15,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from gpux.config.parser import GPUXConfigParser
+from gpux.core.discovery import ModelDiscovery
+from gpux.core.managers.exceptions import ModelNotFoundError
 from gpux.core.runtime import GPUXRuntime
 
 console = Console()
@@ -92,11 +94,8 @@ def run_command(
         logging.getLogger().setLevel(logging.DEBUG)
 
     try:
-        # Find model configuration
-        model_path = _find_model_config(model_name, config_file)
-        if not model_path:
-            console.print(f"[red]Error: Model '{model_name}' not found[/red]")
-            raise typer.Exit(1) from None
+        # Find model configuration using unified discovery
+        model_path = ModelDiscovery.find_model_config(model_name, config_file)
 
         # Parse configuration
         parser = GPUXConfigParser()
@@ -137,47 +136,14 @@ def run_command(
         # Cleanup
         runtime.cleanup()
 
+    except ModelNotFoundError as e:
+        console.print(f"[red]{e.format_error_message()}[/red]")
+        raise typer.Exit(1) from e
     except (FileNotFoundError, ValueError, RuntimeError, json.JSONDecodeError) as e:
         console.print(f"[red]Run failed: {e}[/red]")
         if verbose:
             console.print_exception()
         raise typer.Exit(1) from e
-
-
-def _find_model_config(model_name: str, config_file: str) -> Path | None:
-    """Find model configuration file.
-
-    Args:
-        model_name: Name of the model
-        config_file: Configuration file name
-
-    Returns:
-        Path to model directory or None if not found
-    """
-    # Check current directory
-    current_dir = Path()
-    if (current_dir / config_file).exists():
-        return current_dir
-
-    # Check if model_name is a directory
-    model_dir = Path(model_name)
-    if model_dir.is_dir() and (model_dir / config_file).exists():
-        return model_dir
-
-    # Check .gpux directory for built models
-    gpux_dir = Path(".gpux")
-    if gpux_dir.exists():
-        # Look for model info files
-        for info_file in gpux_dir.glob("**/model_info.json"):
-            try:
-                with info_file.open() as f:
-                    info = json.load(f)
-                if info.get("name") == model_name:
-                    return info_file.parent.parent
-            except (json.JSONDecodeError, OSError):
-                continue
-
-    return None
 
 
 def _load_input_data(  # noqa: PLR0911
