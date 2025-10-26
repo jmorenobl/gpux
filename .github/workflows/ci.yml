@@ -34,10 +34,10 @@ jobs:
 
     - name: Install dependencies
       run: |
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          uv sync --dev --extra tensorflow
-        else
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
           uv sync --dev
+        else
+          uv sync --dev --extra tensorflow
         fi
 
     - name: Run linting
@@ -49,28 +49,28 @@ jobs:
     - name: Run tests
       run: uv run pytest --cov=src/gpux --cov-report=xml --cov-report=html
 
-    - name: Test TensorFlow functionality (Linux only)
-      if: matrix.os == 'ubuntu-latest'
+    - name: Test TensorFlow functionality (Linux & macOS)
+      if: matrix.os != 'windows-latest'
       run: |
-        echo "Testing TensorFlow converter on Linux..."
+        echo "Testing TensorFlow converter on ${{ matrix.os }}..."
         uv run python -c "
         from gpux.core.conversion.tensorflow import TensorFlowConverter
         converter = TensorFlowConverter()
         print('TensorFlow converter created successfully')
         "
 
-    - name: Verify TensorFlow not available (Windows/macOS)
-      if: matrix.os != 'ubuntu-latest'
+    - name: Verify TensorFlow not available (Windows only)
+      if: matrix.os == 'windows-latest'
       run: |
-        echo "Verifying TensorFlow is not installed on ${{ matrix.os }}..."
+        echo "Verifying TensorFlow is not installed on Windows..."
         uv run python -c "
         try:
             from gpux.core.conversion.tensorflow import TensorFlowConverter
             converter = TensorFlowConverter()
-            print('ERROR: TensorFlow should not be available')
+            print('ERROR: TensorFlow should not be available on Windows')
             exit(1)
         except ImportError as e:
-            print(f'SUCCESS: TensorFlow correctly not available: {e}')
+            print(f'SUCCESS: TensorFlow correctly not available on Windows: {e}')
         "
 
     - name: Upload coverage to Codecov
