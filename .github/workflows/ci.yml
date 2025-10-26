@@ -32,13 +32,13 @@ jobs:
       with:
         version: "latest"
 
-    - name: Install dependencies
-      run: |
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          uv sync --dev
-        else
-          uv sync --dev --extra tensorflow
-        fi
+    - name: Install dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: uv sync --dev
+
+    - name: Install dependencies (Linux & macOS)
+      if: matrix.os != 'windows-latest'
+      run: uv sync --dev --extra tensorflow
 
     - name: Run linting
       run: uv run ruff check src/ tests/
