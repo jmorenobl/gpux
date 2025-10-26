@@ -47,6 +47,7 @@ dependencies = [
 tensorflow = [
     "tensorflow>=2.13.0",
     "tf2onnx>=1.15.0",
+    "types-tensorflow>=2.18.0.20251008",
 ]
 
 [dependency-groups]
@@ -59,7 +60,6 @@ dev = [
     "mypy>=1.18.2",
     "pre-commit>=4.0.0",
     "bandit[toml]>=1.8.6",
-    "types-tensorflow>=2.18.0.20251008",
 ]
 docs = [
     "mkdocs-material>=9.6.21",
