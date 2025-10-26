@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 try:
     import tensorflow as tf
 except ImportError:
-    tf = None  # type: ignore[assignment]
+    tf = None  # type: ignore[assignment,unused-ignore]
 
 try:
     import tf2onnx
