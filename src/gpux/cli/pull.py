@@ -12,7 +12,17 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from gpux.core.conversion import ConfigGenerator, PyTorchConverter, TensorFlowConverter
+from typing import TYPE_CHECKING
+
+from gpux.core.conversion import ConfigGenerator, PyTorchConverter
+
+if TYPE_CHECKING:
+    from gpux.core.conversion import TensorFlowConverter
+else:
+    try:
+        from gpux.core.conversion import TensorFlowConverter
+    except ImportError:
+        TensorFlowConverter = None  # type: ignore[assignment]
 from gpux.core.managers import (
     HuggingFaceManager,
     ModelManager,
@@ -187,10 +197,17 @@ def _convert_model_to_onnx(metadata: ModelMetadata, cache_path: Path | None) -> 
     Returns:
         Path to converted ONNX model
     """
-    converter: PyTorchConverter | TensorFlowConverter
     if metadata.format == "pytorch":
-        converter = PyTorchConverter(cache_dir=cache_path)
+        converter: PyTorchConverter | TensorFlowConverter = PyTorchConverter(
+            cache_dir=cache_path
+        )
     elif metadata.format == "tensorflow":
+        if TensorFlowConverter is None:
+            msg = (
+                "TensorFlow conversion requires the tensorflow extra. "
+                "Install with: pip install gpux[tensorflow]"
+            )
+            raise ImportError(msg)
         converter = TensorFlowConverter(cache_dir=cache_path)
     else:
         msg = f"Unsupported format: {metadata.format}"

@@ -7,7 +7,10 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None  # type: ignore[assignment]
 
 from gpux.core.conversion.base import ONNXConverter
 from gpux.core.conversion.optimizer import ConversionError, ModelOptimizer
@@ -27,6 +30,12 @@ class TensorFlowConverter(ONNXConverter):
         Args:
             cache_dir: Directory to cache converted models
         """
+        if tf is None:
+            msg = (
+                "TensorFlow is not installed. "
+                "Install with: pip install gpux[tensorflow]"
+            )
+            raise ImportError(msg)
         super().__init__(cache_dir)
         self.optimizer = ModelOptimizer()
 

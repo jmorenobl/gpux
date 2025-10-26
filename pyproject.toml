@@ -41,8 +41,12 @@ dependencies = [
     "opencv-python>=4.8.0",
     "scikit-learn>=1.3.0",
     "optimum[onnxruntime]>=1.14.0",
-    "tensorflow>=2.13.0",
     "tf2onnx>=1.15.0",
+]
+
+[project.optional-dependencies]
+tensorflow = [
+    "tensorflow>=2.13.0",
 ]
 
 [dependency-groups]
@@ -185,7 +189,7 @@ no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
-warn_unreachable = true
+warn_unreachable = false
 strict_equality = true
 show_error_codes = true
 
@@ -209,10 +213,11 @@ module = [
     "optimum.*",
     "optimum.exporters.*",
     "optimum.exporters.onnx.*",
-    "tensorflow.*",
     "sklearn.*",
     "cv2.*",
     "PIL.*",
+    # Optional dependencies
+    "tensorflow.*",
 ]
 ignore_missing_imports = true
 

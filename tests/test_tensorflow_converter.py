@@ -7,13 +7,21 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-import tensorflow as tf
+
+try:
+    import tensorflow as tf
+
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    tf = None
+    TENSORFLOW_AVAILABLE = False
 
 from gpux.core.conversion.tensorflow import TensorFlowConverter
 from gpux.core.conversion.optimizer import ConversionError
 from gpux.core.managers.base import ModelMetadata
 
 
+@pytest.mark.skipif(not TENSORFLOW_AVAILABLE, reason="TensorFlow not available")
 class TestTensorFlowConverter:
     """Test TensorFlow converter functionality."""
 

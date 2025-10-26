@@ -86,7 +86,10 @@ class TestEndToEndWorkflow:
         )
 
         # Test TensorFlow converter
-        converter = TensorFlowConverter(cache_dir=self.temp_dir)
+        try:
+            converter = TensorFlowConverter(cache_dir=self.temp_dir)
+        except ImportError:
+            pytest.skip("TensorFlow not available")
 
         # Verify converter can handle this model
         assert converter.can_convert(metadata)
@@ -120,7 +123,10 @@ class TestEndToEndWorkflow:
         )
 
         pytorch_converter = PyTorchConverter()
-        tensorflow_converter = TensorFlowConverter()
+        try:
+            tensorflow_converter = TensorFlowConverter()
+        except ImportError:
+            pytest.skip("TensorFlow not available")
 
         # Test format detection
         assert pytorch_converter.can_convert(pytorch_metadata)
@@ -133,7 +139,10 @@ class TestEndToEndWorkflow:
         """Test integration between different conversion components."""
         # Test that converters can be imported and instantiated
         pytorch_converter = PyTorchConverter()
-        tensorflow_converter = TensorFlowConverter()
+        try:
+            tensorflow_converter = TensorFlowConverter()
+        except ImportError:
+            pytest.skip("TensorFlow not available")
 
         # Test that they have the required methods
         assert hasattr(pytorch_converter, "can_convert")
